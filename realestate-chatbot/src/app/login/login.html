@@ -1,0 +1,89 @@
+<div class="login-shell">
+  <div class="panel-left">
+    <div class="brand">
+      <span class="brand-name">Emlak Asistanı</span>
+    </div>
+    <div class="hero-text">
+      <h1>AI ile<br><em>hayalinizdeki evi</em><br>keşfedin.</h1>
+      <p>Parmaklarınızın ucundaki akıllı emlak rehberi. İlanları keşfedin, mahalleleri karşılaştırın ve güvenle karar verin.</p>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="form-card">
+      @if (mode() === 'login') {
+        <div class="form-content" [@.disabled]="true">
+          <div class="form-header">
+            <h2>Hoş geldiniz</h2>
+            <p>Ev aramanıza devam etmek için giriş yapın</p>
+          </div>
+          @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+          <div class="field">
+            <label>E-posta Adresi</label>
+            <input type="email" [(ngModel)]="email" placeholder="ornek@domain.com" (keydown.enter)="onLogin()" />
+          </div>
+          <div class="field">
+            <label>Şifre</label>
+            <input type="password" [(ngModel)]="password" placeholder="••••••••" (keydown.enter)="onLogin()" />
+            <div class="field-hint">
+              <a (click)="setMode('forgot')">Şifremi unuttum</a>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="onLogin()" [disabled]="loading()">
+            @if (loading()) { <span class="spinner"></span> } @else { Giriş Yap }
+          </button>
+          <p class="switch-mode">Hesabınız yok mu? <a (click)="setMode('register')">Hemen oluşturun</a></p>
+        </div>
+      }
+
+      @if (mode() === 'register') {
+        <div class="form-content">
+          <div class="form-header">
+            <h2>Hesap oluştur</h2>
+            <p>Hayalindeki evi bulan binlerce kişiye katılın</p>
+          </div>
+          @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+          <div class="field">
+            <label>Ad Soyad</label>
+            <input type="text" [(ngModel)]="name" placeholder="Can Yılmaz" />
+          </div>
+          <div class="field">
+            <label>E-posta Adresi</label>
+            <input type="email" [(ngModel)]="email" placeholder="ornek@domain.com" />
+          </div>
+          <div class="field">
+            <label>Şifre</label>
+            <input type="password" [(ngModel)]="password" placeholder="En az 6 karakter" />
+          </div>
+          <div class="field">
+            <label>Şifreyi Onayla</label>
+            <input type="password" [(ngModel)]="confirmPassword" placeholder="••••••••" (keydown.enter)="onRegister()" />
+          </div>
+          <button class="btn-primary" (click)="onRegister()" [disabled]="loading()">
+            @if (loading()) { <span class="spinner"></span> } @else { Hesap Oluştur }
+          </button>
+          <p class="switch-mode">Zaten hesabınız var mı? <a (click)="setMode('login')">Giriş yapın</a></p>
+        </div>
+      }
+
+      @if (mode() === 'forgot') {
+        <div class="form-content">
+          <div class="form-header">
+            <h2>Şifreyi sıfırla</h2>
+            <p>Şifrenizi sıfırlamanız için size bir bağlantı göndereceğiz</p>
+          </div>
+          @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+          @if (success()) { <div class="alert alert-success">{{ success() }}</div> }
+          <div class="field">
+            <label>E-posta Adresi</label>
+            <input type="email" [(ngModel)]="forgotEmail" placeholder="ornek@domain.com" (keydown.enter)="onForgotPassword()" />
+          </div>
+          <button class="btn-primary" (click)="onForgotPassword()" [disabled]="loading()">
+            @if (loading()) { <span class="spinner"></span> } @else { Sıfırlama Bağlantısı Gönder }
+          </button>
+          <p class="switch-mode"><a (click)="setMode('login')">← Giriş ekranına dön</a></p>
+        </div>
+      }
+    </div>
+  </div>
+</div>
