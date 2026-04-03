@@ -66,9 +66,8 @@
     <div class="messages-area">
       @if (!chatService.activeConversation() || chatService.activeConversation()?.messages?.length === 0) {
         <div class="empty-state">
-          <div class="empty-icon">🏡</div>
           <h2>Size bugün nasıl yardımcı olabilirim?</h2>
-          <p>Bana emlak ilanları, mahalleler, kredi oranları veya piyasa trendleri hakkında her şeyi sorabilirsiniz.</p>
+          <p>Bana Ankara'daki emlak ilanları, mahalleler, kat sayısı veya evlerle ilgili sormak istediğiniz her şeyi sorabilirsiniz.</p>
           <div class="suggestions">
             @for (s of getSuggestions(); track s) {
               <button class="suggestion-chip" (click)="useSuggestion(s)">{{ s }}</button>
@@ -78,9 +77,6 @@
       } @else {
         @for (msg of chatService.activeConversation()?.messages ?? []; track msg.id) {
           <div class="message-row" [class.user-row]="msg.role === 'user'" [class.bot-row]="msg.role === 'assistant'">
-            @if (msg.role === 'assistant') {
-              <div class="msg-avatar bot-avatar">🏡</div>
-            }
             <div class="bubble" [class.user-bubble]="msg.role === 'user'" [class.bot-bubble]="msg.role === 'assistant'">
               <div class="bubble-text">{{ msg.content }}</div>
               <div class="bubble-time">{{ formatTime(msg.timestamp) }}</div>
@@ -93,7 +89,6 @@
         
         @if (chatService.isTyping()) {
           <div class="message-row bot-row">
-            <div class="msg-avatar bot-avatar">🏡</div>
             <div class="bubble bot-bubble typing-bubble">
               <span class="dot-anim"></span>
               <span class="dot-anim" style="animation-delay:0.18s"></span>
