@@ -19,7 +19,7 @@ export class ChatComponent implements AfterViewChecked {
   inputText = '';
   sidebarOpen = signal(true); // Yan menü açık/kapalı durumu
   confirmDeleteId = signal<string | null>(null); // Silme onayı bekleyen sohbet ID'si
-
+// dışarıdan erişim için servisler ve router
   constructor(
     public auth: AuthService,
     public chatService: ChatService,

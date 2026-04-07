@@ -26,7 +26,7 @@ export class LoginComponent {
   confirmPassword = '';
   forgotEmail = '';
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router) {} // Form modları arasında geçiş yap (Giriş <-> Kayıt vb.)
 
   // Form modları arasında geçiş yap (Giriş <-> Kayıt vb.)
   setMode(m: Mode) {
@@ -60,7 +60,7 @@ export class LoginComponent {
     }
     
     this.loading.set(true);
-    const result = await this.auth.register(this.name, this.email, this.password);
+    const result = await this.auth.register(this.name, this.email, this.password); 
     this.loading.set(false);
     
     if (result.success) {

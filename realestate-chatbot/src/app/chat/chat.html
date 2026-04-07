@@ -23,7 +23,7 @@
             [class.active]="chatService.activeConversation()?.id === conv.id"
             (click)="selectConv(conv.id)"
           >
-            <div class="history-icon">💬</div>
+            
             <div class="history-info">
               <div class="history-title">{{ conv.title }}</div>
               <div class="history-preview">{{ conv.lastMessage | slice:0:45 }}{{ conv.lastMessage.length > 45 ? '…' : '' }}</div>
