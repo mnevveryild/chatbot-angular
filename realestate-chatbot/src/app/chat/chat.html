@@ -27,7 +27,6 @@
             <div class="history-info">
               <div class="history-title">{{ conv.title }}</div>
               <div class="history-preview">{{ conv.lastMessage | slice:0:45 }}{{ conv.lastMessage.length > 45 ? '…' : '' }}</div>
-              <div class="history-time">{{ formatTime(conv.timestamp) }}</div>
             </div>
             
             @if (confirmDeleteId() === conv.id) {
@@ -68,18 +67,12 @@
         <div class="empty-state">
           <h2>Size bugün nasıl yardımcı olabilirim?</h2>
           <p>Bana Ankara'daki emlak ilanları, mahalleler, kat sayısı veya evlerle ilgili sormak istediğiniz her şeyi sorabilirsiniz.</p>
-          <div class="suggestions">
-            @for (s of getSuggestions(); track s) {
-              <button class="suggestion-chip" (click)="useSuggestion(s)">{{ s }}</button>
-            }
-          </div>
         </div>
       } @else {
         @for (msg of chatService.activeConversation()?.messages ?? []; track msg.id) {
           <div class="message-row" [class.user-row]="msg.role === 'user'" [class.bot-row]="msg.role === 'assistant'">
             <div class="bubble" [class.user-bubble]="msg.role === 'user'" [class.bot-bubble]="msg.role === 'assistant'">
               <div class="bubble-text">{{ msg.content }}</div>
-              <div class="bubble-time">{{ formatTime(msg.timestamp) }}</div>
             </div>
             @if (msg.role === 'user') {
               <div class="msg-avatar user-avatar">{{ getUserInitials() }}</div>
@@ -87,15 +80,6 @@
           </div>
         }
         
-        @if (chatService.isTyping()) {
-          <div class="message-row bot-row">
-            <div class="bubble bot-bubble typing-bubble">
-              <span class="dot-anim"></span>
-              <span class="dot-anim" style="animation-delay:0.18s"></span>
-              <span class="dot-anim" style="animation-delay:0.36s"></span>
-            </div>
-          </div>
-        }
       }
       <div #messagesEnd></div>
     </div>
@@ -106,7 +90,7 @@
           #messageInput
           [(ngModel)]="inputText"
           (keydown)="onKeydown($event)"
-          placeholder="İlanlar, mahalleler veya kredi oranları hakkında soru sorun..."
+          placeholder="İlanlar, mahalleler veya ev özellikleri hakkında soru sorun..."
           rows="1"
           class="message-input"
         ></textarea>

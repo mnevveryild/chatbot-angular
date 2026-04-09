@@ -24,7 +24,7 @@
           </div>
           <div class="field">
             <label>Şifre</label>
-            <input type="password" [(ngModel)]="password" placeholder="••••••••" (keydown.enter)="onLogin()" />
+            <input type="password" [(ngModel)]="password" placeholder="***********" (keydown.enter)="onLogin()" />
             <div class="field-hint">
               <a (click)="setMode('forgot')">Şifremi unuttum</a>
             </div>
@@ -45,7 +45,7 @@
           @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
           <div class="field">
             <label>Ad Soyad</label>
-            <input type="text" [(ngModel)]="name" placeholder="Can Yılmaz" />
+            <input type="text" [(ngModel)]="name" placeholder="Adınız ve Soyadınız" />
           </div>
           <div class="field">
             <label>E-posta Adresi</label>
@@ -57,7 +57,7 @@
           </div>
           <div class="field">
             <label>Şifreyi Onayla</label>
-            <input type="password" [(ngModel)]="confirmPassword" placeholder="••••••••" (keydown.enter)="onRegister()" />
+            <input type="password" [(ngModel)]="confirmPassword" placeholder="***********" (keydown.enter)="onRegister()" />
           </div>
           <button class="btn-primary" (click)="onRegister()" [disabled]="loading()">
             @if (loading()) { <span class="spinner"></span> } @else { Hesap Oluştur }

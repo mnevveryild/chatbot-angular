@@ -38,10 +38,9 @@ export class LoginComponent {
   // Giriş yapma işlemi
   async onLogin() {
     this.error.set('');
-    this.loading.set(true);
+
     const result = await this.auth.login(this.email, this.password);
-    this.loading.set(false);
-    
+
     if (result.success) {
       this.router.navigate(['/chat']);
     } else {
@@ -58,13 +57,13 @@ export class LoginComponent {
       this.error.set('Şifreler birbiriyle eşleşmiyor.');
       return;
     }
-    
-    this.loading.set(true);
+
     const result = await this.auth.register(this.name, this.email, this.password); 
-    this.loading.set(false);
+
     
     if (result.success) {
-      this.router.navigate(['/chat']);
+      this.router.navigate(['/login']);
+      this.success.set('Kayıt başarılı! Lütfen giriş yapın.');
     } else {
       this.error.set(result.error || 'Kayıt işlemi başarısız oldu.');
     }
@@ -79,10 +78,6 @@ export class LoginComponent {
       return; 
     }
     
-    this.loading.set(true);
-    // Gerçek bir API olmadığı için kısa bir gecikme simülasyonu
-    await new Promise(r => setTimeout(r, 800));
-    this.loading.set(false);
     
     this.success.set('Eğer bu e-posta ile kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderilecektir.');
   }

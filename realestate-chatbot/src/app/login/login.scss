@@ -8,9 +8,8 @@
 .panel-left {
   width: 48%;
   background: var(--charcoal);
-  background-image:
-    radial-gradient(ellipse at 30% 20%, rgba(196, 163, 90, 0.15) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 80%, rgba(196, 163, 90, 0.08) 0%, transparent 50%);
+  background-image:url('./bg.jpg');
+  background-size: cover;
   padding: 3rem;
   display: flex;
   flex-direction: column;

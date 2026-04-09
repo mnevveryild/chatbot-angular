@@ -79,34 +79,11 @@ export class ChatComponent implements AfterViewChecked {
     this.confirmDeleteId.set(null);
   }
 
-  formatTime(date: Date): string {
-    const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
-    
-    if (diff < 60000) return 'Az önce';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}dk önce`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}sa önce`;
-    
-    return new Date(date).toLocaleDateString('tr-TR');
-  }
-
-  getSuggestions() {
-    return [
-      '2 milyon dolar altı lüks evleri bul',
-      'Ankara mahallelerini karşılaştır',
-      'Güncel kredi faiz oranları nedir?',
-      'Evcil hayvan dostu daireleri göster'
-    ];
-  }
-
-  useSuggestion(text: string) {
-    this.inputText = text;
-    this.sendMessage();
-  }
 
   getUserInitials(): string {
     const name = this.auth.currentUser()?.name ?? '';
-    if (!name) return '??';
+    if (!name) return '';
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    
   }
 }
