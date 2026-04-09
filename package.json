@@ -1,0 +1,37 @@
+{
+  "name": "chatbot-angular",
+  "version": "1.0.0",
+  "description": "<img width=\"1918\" height=\"852\" alt=\"image\" src=\"https://github.com/user-attachments/assets/062a7160-9435-493f-80ca-ea4fc2f3ecfc\" />",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mnevveryild/chatbot-angular.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mnevveryild/chatbot-angular/issues"
+  },
+  "homepage": "https://github.com/mnevveryild/chatbot-angular#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.21.0",
+    "sequelize": "^6.37.8",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "nodemon": "^3.1.14",
+    "typescript": "^6.0.2"
+  }
+}

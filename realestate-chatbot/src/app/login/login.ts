@@ -52,7 +52,7 @@ export class LoginComponent {
   async onRegister() {
     this.error.set('');
     
-    // Şifre eşleşme kontrolü
+  
     if (this.password !== this.confirmPassword) {
       this.error.set('Şifreler birbiriyle eşleşmiyor.');
       return;
