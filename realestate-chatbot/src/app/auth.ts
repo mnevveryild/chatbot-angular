@@ -1,68 +1,98 @@
-import { Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
 
 export interface User {
-  id: string; email: string; name?: string; avatar?: string;
+  id: string;
+  email: string;
+  name?: string;
+  avatar?: string;
 }
-
-const API = 'http://localhost:3000/api';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  // Private signal: Sadece bu servis içinde değiştirilebilir
   private _currentUser = signal<User | null>(null);
+  
+  // Public readonly signals: Dışarıdan sadece okunabilir
   currentUser = this._currentUser.asReadonly();
-  isLoggedIn  = signal(false);
+  
+  // isLoggedIn değerini currentUser'a bağlı otomatik hesaplanan bir değer yapmak daha sağlıklıdır.
+  isLoggedIn = computed(() => !!this._currentUser());
 
-  constructor(private http: HttpClient, private router: Router) {
-    this.restoreSession();
+  constructor(private router: Router) {
+    this.initializeAuth();
   }
 
-  private restoreSession(): void {
-    const token = localStorage.getItem('token');
-    const user  = localStorage.getItem('user');
-    if (token && user) {
-      this._currentUser.set(JSON.parse(user));
-      this.isLoggedIn.set(true);
+  private initializeAuth(): void {
+    const stored = sessionStorage.getItem('re_user');
+    if (stored) {
+      try {
+        const user = JSON.parse(stored);
+        this._currentUser.set(user);
+      } catch (e) {
+        console.error('Kullanıcı verisi ayrıştırılamadı:', e);
+        sessionStorage.removeItem('re_user');
+      }
     }
   }
 
-  getToken(): string | null { return localStorage.getItem('token'); }
+  async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+    // API simülasyonu için küçük bir gecikme 
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-  async login(email: string, password: string):
-      Promise<{ success: boolean; error?: string }> {
-    try {
-      const res: any = await firstValueFrom(
-        this.http.post(`${API}/auth/login`, { email, password })
-      );
-      localStorage.setItem('token', res.token);
-      localStorage.setItem('user', JSON.stringify(res.user));
-      this._currentUser.set(res.user);
-      this.isLoggedIn.set(true);
+    if (email && password.length >= 6) {
+      const user: User = {
+        id: crypto.randomUUID(),
+        email,
+        name: email.split('@')[0]// Basitçe e-posta'nın @ öncesini isim olarak kullanıyoruz
+      };
+      
+      this.setSession(user);
+      return { 
+        success: true 
+      };
+    }
+
+    return { 
+      success: false, 
+      error: 'Geçersiz kimlik bilgileri. Lütfen tekrar deneyin.' 
+    };
+  }
+
+  async register(
+    name: string, 
+    email: string, 
+    password: string): Promise<{ 
+    success: boolean; 
+    error?: string }> {
+        
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    if (name && email && password.length >= 6) {
+      const user: User = {
+        id: crypto.randomUUID(),
+        email,
+        name
+      };
+      
+      this.setSession(user);
       return { success: true };
-    } catch (e: any) {
-      return { success: false, error: e.error?.error || 'Login failed' };
     }
+
+    return { 
+      success: false, 
+      error: 'Lütfen tüm alanları doldurun. Şifre en az 6 karakter olmalıdır.' 
+    };
   }
 
-  async register(name: string, email: string, password: string):
-      Promise<{ success: boolean; error?: string }> {
-    try {
-      await firstValueFrom(
-        this.http.post(`${API}/auth/register`, { name, email, password })
-      );
-      return { success: true };
-    } catch (e: any) {
-      return { success: false, error: e.error?.error || 'Registration failed' };
-    }
+  private setSession(user: User): void {
+    this._currentUser.set(user);
+    sessionStorage.setItem('re_user', JSON.stringify(user));
   }
 
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
     this._currentUser.set(null);
-    this.isLoggedIn.set(false);
+    sessionStorage.removeItem('re_user');
     this.router.navigate(['/login']);
   }
 }

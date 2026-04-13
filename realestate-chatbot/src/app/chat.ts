@@ -15,7 +15,10 @@ export interface Conversation {
   messages: Message[];
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ 
+  providedIn: 'root' 
+})
+
 export class ChatService {
   private _conversations = signal<Conversation[]>([]);
   private _activeConversation = signal<Conversation | null>(null);
@@ -26,6 +29,7 @@ export class ChatService {
   activeConversation = this._activeConversation.asReadonly();
   isTyping = this._isTyping.asReadonly();
 
+  // seçilen sohbeti göstermek için kullanılır
   selectConversation(id: string) {
     const found = this._conversations().find(c => c.id === id) ?? null;
     this._activeConversation.set(found);
@@ -39,14 +43,14 @@ export class ChatService {
       timestamp: new Date(),
       messages: []
     };
-    this._conversations.update(list => [conv, ...list]);
-    this._activeConversation.set(conv);
+    this._conversations.update(list => [conv, ...list]); // Yeni sohbeti listenin başına ekle
+    this._activeConversation.set(conv);// Yeni sohbeti aktif yap
   }
 
   sendMessage(content: string) {
-    if (!content.trim()) return;
+    if (!content.trim()) return; // Boş mesaj gönderilmesini engelle
     
-    // 1. Kullanıcı mesajını oluştur
+    // Kullanıcı mesajını oluştur
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -54,29 +58,29 @@ export class ChatService {
       timestamp: new Date()
     };
 
-    // 2. Kullanıcı mesajını aktif sohbete ekle
+    // Kullanıcı mesajını aktif sohbete ekle
     this._activeConversation.update(conv => {
-      if (!conv) return conv;
+      if (!conv) return conv; // Eğer aktif sohbet yoksa hiçbir şey yapma
       const updated: Conversation = {
         ...conv,
-        messages: [...conv.messages, userMsg],
+        messages: [...conv.messages, userMsg], 
         lastMessage: content.trim(),
         title: conv.title === 'Yeni Sohbet' && conv.messages.length === 0
-          ? content.slice(0, 40) + (content.length > 40 ? '...' : '')
+          ? content.slice(0, 40) + (content.length > 40 ? '...' : '') //başlık 
           : conv.title,
         timestamp: new Date()
       };
-      
+      // Sohbet listesindeki ilgili sohbeti güncelle
       this._conversations.update(list =>
         list.map(c => c.id === updated.id ? updated : c)
       );
       return updated;
     });
 
-    // 3. Bot "yazıyor" durumunu aktif et
+    // Bot "yazıyor" durumunu aktif et
     this._isTyping.set(true);
 
-    // 4. Burayı kendi API çağrımız ile değiştireceğiz
+    // Burayı kendi API çağrımız ile değiştireceğiz
     setTimeout(() => {
       const botMsg: Message = {
         id: crypto.randomUUID(),
@@ -106,14 +110,14 @@ export class ChatService {
   }
 
   deleteConversation(id: string) {
-    // 1. Gereksiz Signal tetiklemelerini önlemek için sohbetin var olup olmadığını kontrol et
+    // Gereksiz Signal tetiklemelerini önlemek için sohbetin var olup olmadığını kontrol et
     const hasConversation = this._conversations().some(c => c.id === id);
     if (!hasConversation) return;
 
-    // 2. İlgili sohbeti listeden çıkararak listeyi güncelle
+    // İlgili sohbeti listeden çıkararak listeyi güncelle
     this._conversations.update(list => list.filter(c => c.id !== id));
 
-    // 3. Eğer silinen sohbet, kullanıcının şu an aktif olarak baktığı sohbetse durumu yönet
+    // Eğer silinen sohbet, kullanıcının şu an aktif olarak baktığı sohbet ise, aktif sohbeti güncelle
     if (this._activeConversation()?.id === id) {
       const remainingConversations = this._conversations();
       

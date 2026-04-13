@@ -14,6 +14,7 @@ type Mode = 'login' | 'register' | 'forgot';
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })
+
 export class LoginComponent {
   mode = signal<Mode>('login'); // Mevcut form modu
   loading = signal(false);      // İşlem devam ediyor mu?
@@ -26,7 +27,11 @@ export class LoginComponent {
   confirmPassword = '';
   forgotEmail = '';
 
-  constructor(private auth: AuthService, private router: Router) {} // Form modları arasında geçiş yap (Giriş <-> Kayıt vb.)
+  constructor(
+    private auth: AuthService, 
+    private router: Router) 
+
+    {} // Form modları arasında geçiş yap (Giriş <-> Kayıt vb.)
 
   // Form modları arasında geçiş yap (Giriş <-> Kayıt vb.)
   setMode(m: Mode) {
@@ -38,7 +43,7 @@ export class LoginComponent {
   // Giriş yapma işlemi
   async onLogin() {
     this.error.set('');
-
+    this.loading.set(true)
     const result = await this.auth.login(this.email, this.password);
 
     if (result.success) {
@@ -46,13 +51,13 @@ export class LoginComponent {
     } else {
       this.error.set(result.error || 'Giriş yapılamadı. Bilgilerinizi kontrol edin.');
     }
+    this.loading.set(false);
   }
 
   // Yeni hesap oluşturma işlemi
   async onRegister() {
     this.error.set('');
-    
-  
+    this.loading.set(true)
     if (this.password !== this.confirmPassword) {
       this.error.set('Şifreler birbiriyle eşleşmiyor.');
       return;
@@ -67,12 +72,13 @@ export class LoginComponent {
     } else {
       this.error.set(result.error || 'Kayıt işlemi başarısız oldu.');
     }
+    this.loading.set(false); //spinner çalışsın diye ekledim, ama gerçek API entegrasyonu yaparken bu satırı kaldırılabilir.
   }
 
   // Şifre sıfırlama işlemi
   async onForgotPassword() {
     this.error.set('');
-    
+    this.loading.set(true)
     if (!this.forgotEmail) { 
       this.error.set('Lütfen e-posta adresinizi girin.'); 
       return; 
@@ -80,5 +86,6 @@ export class LoginComponent {
     
     
     this.success.set('Eğer bu e-posta ile kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderilecektir.');
+    this.loading.set(false);
   }
 }

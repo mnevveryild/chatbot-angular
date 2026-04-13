@@ -32,7 +32,9 @@
           <button class="btn-primary" (click)="onLogin()" [disabled]="loading()">
             @if (loading()) { <span class="spinner"></span> } @else { Giriş Yap }
           </button>
-          <p class="switch-mode">Hesabınız yok mu? <a (click)="setMode('register')">Hemen oluşturun</a></p>
+          <p class="switch-mode">Hesabınız yok mu? 
+            <a (click)="setMode('register')">Hemen oluşturun</a>
+          </p>
         </div>
       }
 
