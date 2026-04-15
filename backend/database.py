@@ -7,22 +7,19 @@ DATABASE_URL = "mysql+pymysql://root:muni1234.@localhost:3306/uygulama_db"
 # SQLAlchemy'nin MySQL ile "konuşma" aracı
 engine = create_engine(
     DATABASE_URL,
-    echo=True  # Geliştirme sırasında SQL sorgularını terminalde gösterir
-               # Canlıya alırken False yapabiliriz
+    echo=False
 )
 
 # SessionLocal: Her API isteği için ayrı bir veritabanı oturumu açar
+# autocommit=False : İşlemleri biz onaylana kadar kaydetmez
+# autoflush=False  : Biz istemedikçe veritabanına yazmaz
 
-# autocommit=False → İşlemleri biz onaylana kadar kaydetmez (güvenli)
-# autoflush=False  → Biz istemedikçe veritabanına yazmaz
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-#Base: Tüm veritabanı modellerimiz bu sınıftan türeyecek
+#Base,tüm veritabanı modellerimiz bu sınıftan türeyecek, veritabanı bağlılığı yaptık
+Base = declarative_base() 
 
-
-Base = declarative_base()
-
-# Dependency (Bağımlılık): Her endpoint'e veritabanı oturumu sağlar
 # "yield" sayesinde istek bitince oturum otomatik kapanır
 
 def get_db():

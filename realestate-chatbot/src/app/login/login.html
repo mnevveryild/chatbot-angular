@@ -29,8 +29,8 @@
               <a (click)="setMode('forgot')">Şifremi unuttum</a>
             </div>
           </div>
-          <button class="btn-primary" (click)="onLogin()" [disabled]="loading()">
-            @if (loading()) { <span class="spinner"></span> } @else { Giriş Yap }
+          <button class="btn-primary" (click)="onLogin()">
+             Giriş Yap
           </button>
           <p class="switch-mode">Hesabınız yok mu? 
             <a (click)="setMode('register')">Hemen oluşturun</a>
