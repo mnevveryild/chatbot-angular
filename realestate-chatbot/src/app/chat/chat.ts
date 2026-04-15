@@ -81,7 +81,7 @@ export class ChatComponent implements AfterViewChecked {
 
 
   getUserInitials(): string {
-    const name = this.auth.currentUser()?.name ?? '';
+    const name = this.auth.currentUser()?.full_name ?? '';
     if (!name) return '';
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
     

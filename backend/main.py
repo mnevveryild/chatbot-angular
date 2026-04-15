@@ -1,6 +1,7 @@
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
@@ -8,8 +9,6 @@ import models
 import schemas
 from database import engine, get_db
 
-# Uygulama başlarken tabloları otomatik oluştur
-# (MySQL'de tablo yoksa CREATE TABLE çalıştırır)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -21,8 +20,6 @@ app = FastAPI(
 )
 
 # CORS Ayarları
-# Angular geliştirme sunucusu genellikle localhost:4200'de çalışır
-# CORS olmadan tarayıcı bu isteği engeller!
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -38,9 +35,9 @@ app.add_middleware(
 # bcrypt: Endüstri standardı, güvenli hash algoritması
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def hash_password(plain_password: str) -> str:
-    """Düz metin şifreyi bcrypt ile hash'ler"""
-    return pwd_context.hash(plain_password)
+def hash_password(plain_password: str):
+    # Bcrypt 72 karakterden sonrasını kabul etmez, manuel olarak kesiyoruz
+    return pwd_context.hash(plain_password[:72])
 
 
 
@@ -57,13 +54,6 @@ def register_user(
     user_data: schemas.UserCreate,             # Angular'dan gelen JSON → otomatik doğrulanır
     db: Session = Depends(get_db)              # Veritabanı oturumu → otomatik enjekte edilir
 ):
-    """
-    Yeni kullanıcı kaydı oluşturur.
-    - E-posta benzersizliği kontrol edilir
-    - Şifre bcrypt ile hash'lenerek saklanır
-    - Başarıda kullanıcı bilgileri döner (şifre HARİÇ)
-    """
-
     # 1. ADIM: E-posta zaten kayıtlı mı?
     existing_user = db.query(models.User).filter(
         models.User.email == user_data.email
@@ -95,9 +85,41 @@ def register_user(
     return new_user        # UserResponse şemasına göre döner (şifre YOK)
 
 
-# SAĞLIK KONTROLÜ — API çalışıyor mu?
-# GET /health → {"status": "ok"}
+# # SAĞLIK KONTROLÜ — API çalışıyor mu?
+# # GET /health → {"status": "ok"}
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "message": "API çalışıyor"}
+# @app.get("/health")
+# def health_check():
+#     return {"status": "ok", "message": "API çalışıyor"}
+
+
+# Login için gelen veriyi doğrulayan şema
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+# Login endpoint
+@app.post("/api/login")
+def login_user(
+    login_data: LoginRequest,
+    db: Session = Depends(get_db)
+):
+    # 1. Kullanıcıyı e-posta ile bul
+    user = db.query(models.User).filter(
+        models.User.email == login_data.email
+    ).first()
+
+    # 2. Kullanıcı yoksa veya şifre yanlışsa — aynı hata mesajı ver (güvenlik nedeniyle)
+    if not user or not pwd_context.verify(login_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="E-posta veya şifre hatalı."
+        )
+
+    # 3. Başarılı — kullanıcı bilgilerini döndür (şifre hariç)
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "is_active": user.is_active
+    }

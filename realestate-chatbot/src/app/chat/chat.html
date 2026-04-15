@@ -46,7 +46,7 @@
       <div class="user-info" *ngIf="sidebarOpen()">
         <div class="avatar">{{ getUserInitials() }}</div>
         <div class="user-details">
-          <div class="user-name">{{ auth.currentUser()?.name }}</div>
+          <div class="user-name">{{ auth.currentUser()?.full_name }}</div>
           <div class="user-email">{{ auth.currentUser()?.email }}</div>
         </div>
       </div>

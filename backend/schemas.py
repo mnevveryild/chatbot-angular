@@ -29,5 +29,5 @@ class UserResponse(BaseModel):
     id: int
     email: EmailStr # Burada da EmailStr kullanmak validasyon tutarlılığı sağlar
     full_name: str  # <--- Bunu eklemeyi unutmayın!
-
+    #şifreyi vermiyoruz
     model_config = ConfigDict(from_attributes=True)

@@ -12,6 +12,7 @@ engine = create_engine(
 )
 
 # SessionLocal: Her API isteği için ayrı bir veritabanı oturumu açar
+
 # autocommit=False → İşlemleri biz onaylana kadar kaydetmez (güvenli)
 # autoflush=False  → Biz istemedikçe veritabanına yazmaz
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

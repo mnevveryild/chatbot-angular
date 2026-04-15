@@ -1,25 +1,43 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
 export interface User {
   id: string;
   email: string;
-  name?: string;
+  full_name: string;
   avatar?: string;
+}
+
+export interface RegisterResponse {
+  id: number;
+  full_name: string;
+  email: string;
+  is_active: boolean;
+}
+
+export interface LoginResponse {
+  id: string;
+  email: string;
+  full_name: string;
+  is_active: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // Private signal: Sadece bu servis içinde değiştirilebilir
+
+  private apiUrl = 'http://localhost:8000/api';
+
   private _currentUser = signal<User | null>(null);
-  
-  // Public readonly signals: Dışarıdan sadece okunabilir
   currentUser = this._currentUser.asReadonly();
-  
-  // isLoggedIn değerini currentUser'a bağlı otomatik hesaplanan bir değer yapmak daha sağlıklıdır.
   isLoggedIn = computed(() => !!this._currentUser());
 
-  constructor(private router: Router) {
+  // HttpClient'ı constructor'a ekledik
+  constructor(
+    private router: Router,
+    private http: HttpClient
+  ) {
     this.initializeAuth();
   }
 
@@ -36,53 +54,84 @@ export class AuthService {
     }
   }
 
-  async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
-    // API simülasyonu için küçük bir gecikme 
-    await new Promise(resolve => setTimeout(resolve, 800));
+  // LOGIN — Gerçek API'ye bağlandı
+  async login(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<LoginResponse>(`${this.apiUrl}/login`, {
+          email,
+          password
+        })
+      );
 
-    if (email && password.length >= 6) {
       const user: User = {
-        id: crypto.randomUUID(),
-        email,
-        name: email.split('@')[0]// Basitçe e-posta'nın @ öncesini isim olarak kullanıyoruz
+        id: response.id,
+        email: response.email,
+        full_name: response.full_name
       };
-      
-      this.setSession(user);
-      return { 
-        success: true 
-      };
-    }
 
-    return { 
-      success: false, 
-      error: 'Geçersiz kimlik bilgileri. Lütfen tekrar deneyin.' 
-    };
-  }
-
-  async register(
-    name: string, 
-    email: string, 
-    password: string): Promise<{ 
-    success: boolean; 
-    error?: string }> {
-        
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    if (name && email && password.length >= 6) {
-      const user: User = {
-        id: crypto.randomUUID(),
-        email,
-        name
-      };
-      
       this.setSession(user);
       return { success: true };
-    }
 
-    return { 
-      success: false, 
-      error: 'Lütfen tüm alanları doldurun. Şifre en az 6 karakter olmalıdır.' 
-    };
+    } catch (err) {
+      const error = err as HttpErrorResponse;
+
+      // Backend'den gelen hata mesajını kullan
+      const message =
+        error.error?.detail ||
+        (error.status === 0
+          ? 'Sunucuya bağlanılamıyor.'
+          : 'Giriş yapılamadı.');
+
+      return { success: false, error: message };
+    }
+  }
+
+  // REGISTER — Gerçek API'ye bağlandı
+
+  async register(
+    full_name: string,
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<RegisterResponse>(`${this.apiUrl}/register`, {
+          full_name,
+          email,
+          password
+        })
+      );
+
+      // Kayıt başarılı → oturumu aç
+      const user: User = {
+        id: String(response.id),
+        email: response.email,
+        full_name: response.full_name
+      };
+
+      this.setSession(user);
+      return { success: true };
+
+    } catch (err) {
+      const error = err as HttpErrorResponse;
+
+      let message = 'Kayıt olunamadı.';
+      if (error.status === 409) {
+        message = 'Bu e-posta adresi zaten kayıtlı.';
+      } else if (error.status === 422) {
+        message = 'Lütfen tüm alanları doğru doldurun.';
+      } else if (error.status === 0) {
+        message = 'Sunucuya bağlanılamıyor.';
+      } else if (error.error?.detail) {
+        message = error.error.detail;
+      }
+
+      return { success: false, error: message };
+    }
   }
 
   private setSession(user: User): void {
