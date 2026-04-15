@@ -9,6 +9,23 @@ import models
 import schemas
 from database import get_db
 
+import os
+from dotenv import load_dotenv
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+
+# .env dosyasını yükle
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+
+# if not SECRET_KEY:
+#     print("HATA: .env dosyasından SECRET_KEY okunamadı!")
+# else:
+#     print("Başarılı: Gizli anahtar yüklendi.")
+
 # FastAPI uygulaması
 app = FastAPI(
     title="Kayıt Sistemi API",
