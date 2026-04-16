@@ -1,4 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { AuthService } from './auth';
 
 export interface Message {
   id: string;
@@ -20,6 +23,11 @@ export interface Conversation {
 })
 
 export class ChatService {
+
+  private http = inject(HttpClient);
+  private apiUrl = 'http://localhost:4200/api/chat';
+
+  
   private _conversations = signal<Conversation[]>([]);
   private _activeConversation = signal<Conversation | null>(null);
   private _isTyping = signal(false);
@@ -29,12 +37,118 @@ export class ChatService {
   activeConversation = this._activeConversation.asReadonly();
   isTyping = this._isTyping.asReadonly();
 
-  // seçilen sohbeti göstermek için kullanılır
+  constructor() {
+    // Uygulama başladığında mevcut kullanıcının geçmişini yükle
+    // Not: userId'yi normalde AuthService'den almalısın
+    this.loadHistoryFromApi(1);
+  }
+
+  async loadHistoryFromApi(userId: number) {
+    try {
+      const history = await firstValueFrom(
+        this.http.get<any[]>(`${this.apiUrl}/history/${userId}`)
+      );
+
+      const loadedMessages: Message[] = history.map(item => ({
+        id: item.id,
+        role: item.role,
+        content: item.content,
+        timestamp: new Date(item.created_at)
+      }));
+
+      const defaultConv: Conversation = {
+        id: 'default-session',
+        title: 'Genel Sohbet',
+        lastMessage: loadedMessages[loadedMessages.length - 1]?.content || '',
+        timestamp: new Date(),
+        messages: loadedMessages
+      };
+
+      this._conversations.set([defaultConv]);
+      this._activeConversation.set(defaultConv);
+    } catch (error) {
+      console.error('Mesaj geçmişi yüklenirken hata oluştu:', error);
+    }
+  }
+
+  // Mesaj Gönderme (Signal + API Entegrasyonu)
+  async sendMessage(content: string, userId: number) {
+    if (!content.trim()) return;
+
+    // Arayüzde hemen görünmesi için geçici kullanıcı mesajı
+    const userMsg: Message = {
+      role: 'user',
+      content: content.trim(),
+      timestamp: new Date()
+    };
+
+    // UI'ı anlık güncelle
+    this.updateLocalMessages(userMsg);
+
+    try {
+      // API'ye Kaydet (POST)
+      const saveRequest = {
+        user_id: userId,
+        role: 'user',
+        content: content.trim()
+      };
+
+      await firstValueFrom(this.http.post(this.apiUrl, saveRequest));
+
+      // Bot yanıtı simülasyonu (Veya gerçek AI API çağrın)
+      this._isTyping.set(true);
+      
+      // Örnek Bot Yanıtı
+      setTimeout(async () => {
+        const botResponseContent = "Bu veritabanına kaydedilen bir cevaptır.";
+        
+        const botMsg: Message = {
+          role: 'assistant',
+          content: botResponseContent,
+          timestamp: new Date()
+        };
+
+        // Bot cevabını da DB'ye kaydet
+        await firstValueFrom(this.http.post(this.apiUrl, {
+          user_id: userId,
+          role: 'assistant',
+          content: botResponseContent
+        }));
+
+        this._isTyping.set(false);
+        this.updateLocalMessages(botMsg);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Mesaj gönderilirken hata oluştu:', error);
+      this._isTyping.set(false);
+    }
+  }
+// Local Signal güncelleme yardımcı fonksiyonu
+  private updateLocalMessages(msg: Message) {
+    this._activeConversation.update(conv => {
+      if (!conv) return conv;
+      const updated: Conversation = {
+        ...conv,
+        messages: [...conv.messages, msg],
+        lastMessage: msg.content,
+        timestamp: new Date()
+      };
+      
+      this._conversations.update(list => 
+        list.map(c => c.id === updated.id ? updated : c)
+      );
+      return updated;
+    });
+  }
+
+  // Sohbet Seçme
   selectConversation(id: string) {
     const found = this._conversations().find(c => c.id === id) ?? null;
     this._activeConversation.set(found);
   }
 
+  // Yeni Sohbet Başlatma (Local)
   newConversation() {
     const conv: Conversation = {
       id: crypto.randomUUID(),
@@ -43,86 +157,7 @@ export class ChatService {
       timestamp: new Date(),
       messages: []
     };
-    this._conversations.update(list => [conv, ...list]); // Yeni sohbeti listenin başına ekle
-    this._activeConversation.set(conv);// Yeni sohbeti aktif yap
-  }
-
-  sendMessage(content: string) {
-    if (!content.trim()) return; // Boş mesaj gönderilmesini engelle
-    
-    // Kullanıcı mesajını oluştur
-    const userMsg: Message = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: content.trim(),
-      timestamp: new Date()
-    };
-
-    // Kullanıcı mesajını aktif sohbete ekle
-    this._activeConversation.update(conv => {
-      if (!conv) return conv; // Eğer aktif sohbet yoksa hiçbir şey yapma
-      const updated: Conversation = {
-        ...conv,
-        messages: [...conv.messages, userMsg], 
-        lastMessage: content.trim(),
-        title: conv.title === 'Yeni Sohbet' && conv.messages.length === 0
-          ? content.slice(0, 40) + (content.length > 40 ? '...' : '') //başlık 
-          : conv.title,
-        timestamp: new Date()
-      };
-      // Sohbet listesindeki ilgili sohbeti güncelle
-      this._conversations.update(list =>
-        list.map(c => c.id === updated.id ? updated : c)
-      );
-      return updated;
-    });
-
-    // Bot "yazıyor" durumunu aktif et
-    this._isTyping.set(true);
-
-    // Burayı kendi API çağrımız ile değiştireceğiz
-    setTimeout(() => {
-      const botMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: 'vfhngjkmcdmjvfnhgkmdccmjfvnhgkmcdcmdjvfg', // Buraya API'den dönen text gelecek
-        timestamp: new Date()
-      };
-
-      // Yazıyor durumunu kapat
-      this._isTyping.set(false);
-      
-      // Bot mesajını aktif sohbete ekle
-      this._activeConversation.update(conv => {
-        if (!conv) return conv;
-        const updated: Conversation = { 
-          ...conv, 
-          messages: [...conv.messages, botMsg], 
-          lastMessage: botMsg.content, 
-          timestamp: new Date() 
-        };
-        
-        this._conversations.update(list => list.map(c => c.id === updated.id ? updated : c));
-        return updated;
-      });
-
-    });
-  }
-
-  deleteConversation(id: string) {
-    // Gereksiz Signal tetiklemelerini önlemek için sohbetin var olup olmadığını kontrol et
-    const hasConversation = this._conversations().some(c => c.id === id);
-    if (!hasConversation) return;
-
-    // İlgili sohbeti listeden çıkararak listeyi güncelle
-    this._conversations.update(list => list.filter(c => c.id !== id));
-
-    // Eğer silinen sohbet, kullanıcının şu an aktif olarak baktığı sohbet ise, aktif sohbeti güncelle
-    if (this._activeConversation()?.id === id) {
-      const remainingConversations = this._conversations();
-      
-      // Geriye başka sohbetler kaldıysa ilkini aktif yap, kalmadıysa ekranı boş (null) duruma getir
-      this._activeConversation.set(remainingConversations.length > 0 ? remainingConversations[0] : null);
-    }
+    this._conversations.update(list => [conv, ...list]);
+    this._activeConversation.set(conv);
   }
 }

@@ -33,3 +33,31 @@ class UserResponse(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+# Chat geçmişi için gelen veriyi tanımlayan şema (Angular -> FastAPI)
+class ChatMessageCreate(BaseModel):
+    user_id:int
+    role:str = Field(
+        ...,
+        pattern="^(user|assistant)$",
+
+    )
+    content:str = Field(    
+        ...,
+        min_length=1,
+        max_length=10000
+    )
+    
+    
+# Chat geçmişi için dönen veriyi tanımlayan şema (FastAPI -> Angular)    
+class ChatMessageResponse(BaseModel):
+    id:int
+    user_id:int
+    role:str
+    content:str
+    created_at:str
+
+    model_config = ConfigDict(from_attributes=True) # SQLAlchemy modellerinden gelen veriyi Pydantic modellerine dönüştürmek için gerekli ayar
+
+

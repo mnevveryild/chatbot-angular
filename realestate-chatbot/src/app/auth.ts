@@ -106,7 +106,7 @@ export class AuthService {
         })
       );
 
-      // dönen değeri user onjesine dönüştürüp session'a kaydettik
+      // dönen değeri user objesine dönüştürüp session'a kaydettik
       const user: User = {
         id: String(response.id),
         email: response.email,

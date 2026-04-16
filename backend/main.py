@@ -52,16 +52,13 @@ def hash_password(plain_password: str):
     return pwd_context.hash(plain_password[:72])
 
 
-
-# KAYIT ENDPOINT'İ
-
 @app.post(
     "/api/register",
     response_model=schemas.UserResponse,       # Dönecek verinin şekli Fast'ten Angular'a
     status_code=status.HTTP_201_CREATED,       # Başarıda 201 döner
 )
 def register_user(
-    user_data: schemas.UserCreate,             # Angular'dan gelen 
+    user_data: schemas.UserCreate,             # Angular'dan gelen veri
     db: Session = Depends(get_db)              
 ):
     #E-posta zaten kayıtlı mı?
@@ -116,3 +113,47 @@ def login_user(
         "full_name": user.full_name,
         "is_active": user.is_active
     }
+# Chat mesajı kaydetme endpoint'i
+@app.post("/api/chat",
+    response_model=schemas.ChatMessageResponse
+)
+
+def save_chat_message(
+    chat_message: schemas.ChatMessageCreate,
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(
+        models.User.id == chat_message.user_id
+    ).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Kullanıcı bulunamadı"
+        )
+    
+    new_message = models.ChatHistory(
+        user_id=chat_message.user_id,
+        role=chat_message.role,
+        content=chat_message.content
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+    return new_message
+
+@app.get("/api/chat/{user_id}", response_model=list[schemas.ChatMessageResponse])
+def get_chat_history(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    messages = db.query(models.ChatHistory).filter(
+        models.ChatHistory.user_id == user_id
+    ).order_by(models.ChatHistory.created_at).all()
+    
+    if not messages:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bu kullanıcıya ait chat geçmişi bulunamadı."
+        )
+    
+    return messages
