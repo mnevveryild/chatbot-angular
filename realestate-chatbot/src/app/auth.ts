@@ -61,7 +61,7 @@ export class AuthService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await firstValueFrom(
-        this.http.post<LoginResponse>(`${this.apiUrl}/login`, {
+        this.http.post<LoginResponse>(`${this.apiUrl}/login`, { //backend ile frontendi konuşturduk
           email,
           password
         })
@@ -99,14 +99,14 @@ export class AuthService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await firstValueFrom(
-        this.http.post<RegisterResponse>(`${this.apiUrl}/register`, {
+        this.http.post<RegisterResponse>(`${this.apiUrl}/register`, { // backend ile frontendi konuşturduk
           full_name,
           email,
           password
         })
       );
 
-      // Kayıt başarılı → oturumu aç
+      // dönen değeri user onjesine dönüştürüp session'a kaydettik
       const user: User = {
         id: String(response.id),
         email: response.email,
