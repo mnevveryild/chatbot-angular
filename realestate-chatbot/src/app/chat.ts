@@ -1,10 +1,9 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from './auth';
 
 export interface Message {
-  id: string;
+  id?: number;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
@@ -21,96 +20,147 @@ export interface Conversation {
 @Injectable({ 
   providedIn: 'root' 
 })
-
 export class ChatService {
-
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:4200/api/chat';
+  private apiUrl = 'http://localhost:8000/api/chat';
 
-  
+  private currentUserId = signal<number | null>(null);
+
   private _conversations = signal<Conversation[]>([]);
   private _activeConversation = signal<Conversation | null>(null);
   private _isTyping = signal(false);
 
-  // Dışarıdan sadece okunabilir signaller
   conversations = this._conversations.asReadonly();
   activeConversation = this._activeConversation.asReadonly();
   isTyping = this._isTyping.asReadonly();
 
   constructor() {
-    // Uygulama başladığında mevcut kullanıcının geçmişini yükle
-    // Not: userId'yi normalde AuthService'den almalısın
-    this.loadHistoryFromApi(1);
+    const stored = sessionStorage.getItem('re_user');
+  if (stored) {
+    try {
+      const user = JSON.parse(stored);
+      if (user?.id) {
+        // Sadece mevcut kullanıcı yoksa yükle
+        if (this.currentUserId() !== Number(user.id)) {
+          this.setUserId(Number(user.id));
+        }
+      }
+    } catch (e) {
+      console.error('Kullanıcı verisi okunamadı:', e);
+    }
   }
+}
 
-  async loadHistoryFromApi(userId: number) {
+  setUserId(id: number) {
+  // Yeni kullanıcı için önce eski veriyi temizle
+  this._conversations.set([]);
+  this._activeConversation.set(null);
+  this.currentUserId.set(id);
+  this.loadAllConversations(id);
+}
+
+  clearSession() {
+  this._conversations.set([]);
+  this._activeConversation.set(null);
+  this.currentUserId.set(null);
+}
+
+  async loadAllConversations(userId: number) {
     try {
       const history = await firstValueFrom(
-        this.http.get<any[]>(`${this.apiUrl}/history/${userId}`)
+        this.http.get<any[]>(`${this.apiUrl}/${userId}`)
       );
 
-      const loadedMessages: Message[] = history.map(item => ({
-        id: item.id,
-        role: item.role,
-        content: item.content,
-        timestamp: new Date(item.created_at)
-      }));
+      if (history.length === 0) {
+        // Geçmiş yok, yeni sohbet aç
+        this.newConversation();
+        return;
+      }
 
-      const defaultConv: Conversation = {
-        id: 'default-session',
-        title: 'Genel Sohbet',
-        lastMessage: loadedMessages[loadedMessages.length - 1]?.content || '',
-        timestamp: new Date(),
-        messages: loadedMessages
-      };
+      const grouped = new Map<string, any[]>();
+      for (const item of history) {
+        if (!grouped.has(item.conversation_id)) {
+          grouped.set(item.conversation_id, []);
+        }
+        grouped.get(item.conversation_id)!.push(item);
+      }
 
-      this._conversations.set([defaultConv]);
-      this._activeConversation.set(defaultConv);
+      const conversations: Conversation[] = [];
+      grouped.forEach((messages, convId) => {
+        const mapped: Message[] = messages.map(item => ({
+          id: item.id,
+          role: item.role,
+          content: item.content,
+          timestamp: new Date(item.created_at)
+        }));
+
+        conversations.push({
+          id: convId,
+          title: mapped[0]?.content.slice(0, 30) || 'Sohbet',
+          lastMessage: mapped[mapped.length - 1]?.content || '',
+          timestamp: new Date(messages[messages.length - 1].created_at),
+          messages: mapped
+        });
+      });
+
+      conversations.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+      this._conversations.set(conversations);
+      this._activeConversation.set(conversations[0] ?? null);
+
     } catch (error) {
-      console.error('Mesaj geçmişi yüklenirken hata oluştu:', error);
+      console.error('Sohbet geçmişi yüklenemedi:', error);
+      // Hata olsa bile yeni sohbet aç ki kullanıcı mesaj yazabilsin
+      this.newConversation();
     }
   }
 
-  // Mesaj Gönderme (Signal + API Entegrasyonu)
-  async sendMessage(content: string, userId: number) {
-    if (!content.trim()) return;
+  async sendMessage(content: string) {
+    const userId = this.currentUserId();
+    if (!userId) {
+      console.error('Kullanıcı ID bulunamadı.');
+      return;
+    }
 
-    // Arayüzde hemen görünmesi için geçici kullanıcı mesajı
+    // Aktif sohbet yoksa otomatik yeni sohbet aç
+    if (!this._activeConversation()) {
+      this.newConversation();
+    }
+
+    const activeConv = this._activeConversation();
+    if (!activeConv) return;
+
+    const cleanContent = content.trim();
+    if (!cleanContent) return;
+
     const userMsg: Message = {
       role: 'user',
-      content: content.trim(),
+      content: cleanContent,
       timestamp: new Date()
     };
-
-    // UI'ı anlık güncelle
     this.updateLocalMessages(userMsg);
 
     try {
-      // API'ye Kaydet (POST)
-      const saveRequest = {
+      await firstValueFrom(this.http.post(this.apiUrl, {
         user_id: userId,
+        conversation_id: activeConv.id,
         role: 'user',
-        content: content.trim()
-      };
+        content: cleanContent
+      }));
 
-      await firstValueFrom(this.http.post(this.apiUrl, saveRequest));
-
-      // Bot yanıtı simülasyonu (Veya gerçek AI API çağrın)
       this._isTyping.set(true);
-      
-      // Örnek Bot Yanıtı
+
       setTimeout(async () => {
-        const botResponseContent = "Bu veritabanına kaydedilen bir cevaptır.";
-        
+        const botResponseContent = "İsteğiniz veritabanına kaydedildi.";
         const botMsg: Message = {
           role: 'assistant',
           content: botResponseContent,
           timestamp: new Date()
         };
 
-        // Bot cevabını da DB'ye kaydet
         await firstValueFrom(this.http.post(this.apiUrl, {
           user_id: userId,
+          conversation_id: activeConv.id,
           role: 'assistant',
           content: botResponseContent
         }));
@@ -120,35 +170,52 @@ export class ChatService {
       }, 1000);
 
     } catch (error) {
-      console.error('Mesaj gönderilirken hata oluştu:', error);
+      console.error('Mesaj gönderimi başarısız:', error);
       this._isTyping.set(false);
     }
   }
-// Local Signal güncelleme yardımcı fonksiyonu
-  private updateLocalMessages(msg: Message) {
-    this._activeConversation.update(conv => {
-      if (!conv) return conv;
-      const updated: Conversation = {
-        ...conv,
-        messages: [...conv.messages, msg],
-        lastMessage: msg.content,
-        timestamp: new Date()
-      };
-      
-      this._conversations.update(list => 
-        list.map(c => c.id === updated.id ? updated : c)
-      );
-      return updated;
-    });
-  }
 
-  // Sohbet Seçme
   selectConversation(id: string) {
     const found = this._conversations().find(c => c.id === id) ?? null;
     this._activeConversation.set(found);
   }
 
-  // Yeni Sohbet Başlatma (Local)
+  deleteConversation(id: string) {
+    const conv = this._conversations().find(c => c.id === id);
+    if (!conv) return;
+
+    const messageIds = conv.messages
+      .map(m => m.id)
+      .filter((mid): mid is number => mid !== undefined);
+
+    if (messageIds.length === 0) {
+      this._conversations.update(list => list.filter(c => c.id !== id));
+      if (this._activeConversation()?.id === id) {
+        this._activeConversation.set(null);
+      }
+      return;
+    }
+
+    firstValueFrom(
+      this.http.post(`${this.apiUrl}/delete-messages`, {
+        message_ids: messageIds
+      })
+    ).then(() => {
+      this._conversations.update(list => list.filter(c => c.id !== id));
+      if (this._activeConversation()?.id === id) {
+        // Silinen sohbet aktifse bir sonrakine geç, yoksa yeni sohbet aç
+        const remaining = this._conversations();
+        if (remaining.length > 0) {
+          this._activeConversation.set(remaining[0]);
+        } else {
+          this.newConversation();
+        }
+      }
+    }).catch(error => {
+      console.error('Mesajlar silinemedi:', error);
+    });
+  }
+
   newConversation() {
     const conv: Conversation = {
       id: crypto.randomUUID(),
@@ -159,5 +226,22 @@ export class ChatService {
     };
     this._conversations.update(list => [conv, ...list]);
     this._activeConversation.set(conv);
+  }
+
+  private updateLocalMessages(msg: Message) {
+    this._activeConversation.update(conv => {
+      if (!conv) return null;
+      const updated = {
+        ...conv,
+        messages: [...conv.messages, msg],
+        lastMessage: msg.content,
+        timestamp: new Date()
+      };
+
+      this._conversations.update(list =>
+        list.map(c => c.id === updated.id ? updated : c)
+      );
+      return updated;
+    });
   }
 }

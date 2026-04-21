@@ -2,6 +2,7 @@ import { Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { ChatService } from './chat';
 
 export interface User {
   id: string;
@@ -33,10 +34,12 @@ export class AuthService {
   currentUser = this._currentUser.asReadonly();
   isLoggedIn = computed(() => !!this._currentUser());
 
-  // HttpClient'ı constructor'a ekledik
+  
   constructor(
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private chatService: ChatService
+
   ) {
     this.initializeAuth();
   }
@@ -141,6 +144,7 @@ export class AuthService {
 
   logout(): void {
     this._currentUser.set(null);
+    this.chatService.clearSession(); // ChatService'deki session'ı temizle
     sessionStorage.removeItem('re_user');
     this.router.navigate(['/login']);
   }

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator, Field, ConfigDict
+from datetime import datetime
 
 # Gelen veri şeması (Angular -> FastAPI)
 class UserCreate(BaseModel):
@@ -43,6 +44,7 @@ class ChatMessageCreate(BaseModel):
         pattern="^(user|assistant)$",
 
     )
+    conversation_id: str | None = None  # ← ekle
     content:str = Field(    
         ...,
         min_length=1,
@@ -52,12 +54,11 @@ class ChatMessageCreate(BaseModel):
     
 # Chat geçmişi için dönen veriyi tanımlayan şema (FastAPI -> Angular)    
 class ChatMessageResponse(BaseModel):
-    id:int
-    user_id:int
-    role:str
-    content:str
-    created_at:str
+    id: int
+    user_id: int
+    role: str
+    content: str
+    created_at: datetime  # str değil datetime
+    conversation_id: str | None = None  # ← ekle
 
-    model_config = ConfigDict(from_attributes=True) # SQLAlchemy modellerinden gelen veriyi Pydantic modellerine dönüştürmek için gerekli ayar
-
-
+    model_config = ConfigDict(from_attributes=True)

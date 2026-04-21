@@ -56,6 +56,11 @@ class ChatHistory(Base):
         Enum("user", "assistant", name="chat_roles"),
         nullable=False
     )
+    conversation_id = Column(
+        String(36), 
+        nullable=False, 
+        index=True
+    )  
     content = Column(
         String(10000),
         nullable=False

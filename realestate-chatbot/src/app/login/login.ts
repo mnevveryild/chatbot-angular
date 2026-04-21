@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth';
+import { ChatService } from '../chat'; // ← ekle (kendi path'ine göre düzenle)
 import { CommonModule } from '@angular/common';
 
 type Mode = 'login' | 'register' | 'forgot';
@@ -27,7 +28,8 @@ export class LoginComponent {
 
   constructor(
     private auth: AuthService,
-    private router: Router
+    private router: Router,
+    private chatService: ChatService // ← ekle
   ) {}
 
   setMode(m: Mode) {
@@ -39,7 +41,6 @@ export class LoginComponent {
   async onLogin() {
     this.error.set('');
 
-    // Basit boşluk kontrolü
     if (!this.email || !this.password) {
       this.error.set('Lütfen e-posta ve şifrenizi girin.');
       return;
@@ -51,12 +52,16 @@ export class LoginComponent {
       const result = await this.auth.login(this.email, this.password);
 
       if (result.success) {
+        // ← Login sonrası gerçek user ID'yi ChatService'e aktar
+        const userId = Number(this.auth.currentUser()?.id);
+        if (userId) {
+          this.chatService.setUserId(userId);
+        }
         this.router.navigate(['/chat']);
       } else {
         this.error.set(result.error || 'Giriş yapılamadı.');
       }
     } finally {
-      // Başarılı da olsa hatalı da olsa spinner durur
       this.loading.set(false);
     }
   }
@@ -64,13 +69,11 @@ export class LoginComponent {
   async onRegister() {
     this.error.set('');
 
-    // Şifre eşleşme kontrolü — loading başlamadan önce
     if (this.password !== this.confirmPassword) {
       this.error.set('Şifreler birbiriyle eşleşmiyor.');
-      return; // loading hiç başlamadı, sorun yok
+      return;
     }
 
-    // Boşluk kontrolü
     if (!this.name || !this.email || !this.password) {
       this.error.set('Lütfen tüm alanları doldurun.');
       return;
@@ -82,6 +85,11 @@ export class LoginComponent {
       const result = await this.auth.register(this.name, this.email, this.password);
 
       if (result.success) {
+        // ← Kayıt sonrası da aynı şekilde ID'yi aktar
+        const userId = Number(this.auth.currentUser()?.id);
+        if (userId) {
+          this.chatService.setUserId(userId);
+        }
         this.router.navigate(['/chat']);
       } else {
         this.error.set(result.error || 'Kayıt işlemi başarısız oldu.');
@@ -97,16 +105,13 @@ export class LoginComponent {
 
     if (!this.forgotEmail) {
       this.error.set('Lütfen e-posta adresinizi girin.');
-      return; // loading başlamadan çıktık, sorun yok
+      return;
     }
 
     this.loading.set(true);
 
     try {
-      // Şimdilik simüle ediliyor
-      // İleride: await this.auth.sendPasswordReset(this.forgotEmail);
       await new Promise(resolve => setTimeout(resolve, 800));
-
       this.success.set(
         'Eğer bu e-posta ile kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderilecektir.'
       );
