@@ -22,7 +22,7 @@ ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 app = FastAPI(
-    title="Kayıt Sistemi API",
+    title="Chatbot Kontrol Paneli",
     description="Angular + FastAPI + MySQL kayıt sistemi",
     version="1.0.0"
 )
@@ -42,11 +42,11 @@ def hash_password(plain_password: str):
     return pwd_context.hash(plain_password[:72])
 
 
-# ───── REGISTER ─────
+# register
 @app.post(
     "/api/register",
     response_model=schemas.UserResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_201_CREATED, #oluşturuldu
 )
 def register_user(
     user_data: schemas.UserCreate,
@@ -58,7 +58,7 @@ def register_user(
 
     if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=status.HTTP_409_CONFLICT, #çakışma
             detail="Bu e-posta adresi zaten kayıtlı."
         )
 
@@ -76,7 +76,7 @@ def register_user(
     return new_user
 
 
-# ───── LOGIN ─────
+# login
 @app.post("/api/login")
 def login_user(
     login_data: schemas.LoginRequest,
@@ -88,7 +88,7 @@ def login_user(
 
     if not user or not pwd_context.verify(login_data.password[:72], user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_401_UNAUTHORIZED,#yetkisiz
             detail="E-posta veya şifre hatalı."
         )
     return {
@@ -99,9 +99,8 @@ def login_user(
     }
 
 
-# ───── CHAT MESAJI KAYDET ─────
 
-
+# mesaj kaydet 
 @app.post("/api/chat", response_model=schemas.ChatMessageResponse)
 def save_chat_message(
     chat_message: schemas.ChatMessageCreate,
@@ -112,12 +111,12 @@ def save_chat_message(
     ).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND, #bulunamadı
             detail="Kullanıcı bulunamadı."
         )
 
     # conversation_id boş gelirse backend otomatik üretsin
-    conversation_id = chat_message.conversation_id or str(uuid.uuid4())
+    conversation_id = chat_message.conversation_id or str(uuid.uuid4()) # nullable, yoksa yeni bir UUID oluştur 
 
     new_message = models.ChatHistory(
         user_id=chat_message.user_id,
@@ -131,7 +130,7 @@ def save_chat_message(
     return new_message
 
 
-# ───── SEÇİLİ MESAJLARI SİL (önce tanımlanmalı!) ─────
+# seçili mesajları sil
 class DeleteMessagesRequest(BaseModel):
     message_ids: List[int]
 
@@ -153,7 +152,7 @@ def delete_messages(
 
     return {"message": f"{len(request.message_ids)} mesaj silindi."}
 
-# ───── TÜM GEÇMİŞİ SİL ─────
+# tüm geçmişi sil
 @app.delete("/api/chat/{user_id}")
 def delete_chat_history(
     user_id: int,
@@ -176,7 +175,7 @@ def delete_chat_history(
     return {"message": "Sohbet geçmişi silindi."}
 
 
-# ───── GEÇMİŞİ GETİR ─────
+# geçmişi yükle
 @app.get("/api/chat/{user_id}", response_model=list[schemas.ChatMessageResponse])
 def get_chat_history(
     user_id: int,

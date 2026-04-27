@@ -34,13 +34,14 @@ export class ChatService {
   activeConversation = this._activeConversation.asReadonly();
   isTyping = this._isTyping.asReadonly();
 
+
+  // kullanıcı oturumu kontrolü, sayfa yenilense bile sessionStorage'dan kullanıcı bilgisi yükle
   constructor() {
     const stored = sessionStorage.getItem('re_user');
   if (stored) {
     try {
       const user = JSON.parse(stored);
       if (user?.id) {
-        // Sadece mevcut kullanıcı yoksa yükle
         if (this.currentUserId() !== Number(user.id)) {
           this.setUserId(Number(user.id));
         }
@@ -51,14 +52,17 @@ export class ChatService {
   }
 }
 
+
+ // Yeni kullanıcı için önce eski veriyi temizle ve ardından yeni kullanıcı ID'sini yükle
   setUserId(id: number) {
-  // Yeni kullanıcı için önce eski veriyi temizle
   this._conversations.set([]);
   this._activeConversation.set(null);
   this.currentUserId.set(id);
   this.loadAllConversations(id);
 }
 
+
+// Kullanıcı çıkış yaparken tüm sohbet verilerini temizle
   clearSession() {
   this._conversations.set([]);
   this._activeConversation.set(null);
@@ -67,16 +71,17 @@ export class ChatService {
 
   async loadAllConversations(userId: number) {
     try {
-      const history = await firstValueFrom(
+      const history = await firstValueFrom( 
         this.http.get<any[]>(`${this.apiUrl}/${userId}`)
       );
 
       if (history.length === 0) {
-        // Geçmiş yok, yeni sohbet aç
         this.newConversation();
         return;
       }
 
+
+// conversation_id'ye göre gruplandır
       const grouped = new Map<string, any[]>();
       for (const item of history) {
         if (!grouped.has(item.conversation_id)) {
@@ -85,6 +90,8 @@ export class ChatService {
         grouped.get(item.conversation_id)!.push(item);
       }
 
+
+// Her grup için Conversation oluştur
       const conversations: Conversation[] = [];
       grouped.forEach((messages, convId) => {
         const mapped: Message[] = messages.map(item => ({
@@ -93,7 +100,7 @@ export class ChatService {
           content: item.content,
           timestamp: new Date(item.created_at)
         }));
-
+// mesaj içeriğinden başlık oluştur, son mesajı ve tarihini alarak conversation objesine ekle
         conversations.push({
           id: convId,
           title: mapped[0]?.content.slice(0, 30) || 'Sohbet',
@@ -103,6 +110,9 @@ export class ChatService {
         });
       });
 
+
+
+      //son mesaj tarihine göre sırala
       conversations.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
       this._conversations.set(conversations);
@@ -110,10 +120,11 @@ export class ChatService {
 
     } catch (error) {
       console.error('Sohbet geçmişi yüklenemedi:', error);
-      // Hata olsa bile yeni sohbet aç ki kullanıcı mesaj yazabilsin
       this.newConversation();
     }
   }
+
+
 
   async sendMessage(content: string) {
     const userId = this.currentUserId();
@@ -122,7 +133,7 @@ export class ChatService {
       return;
     }
 
-    // Aktif sohbet yoksa otomatik yeni sohbet aç
+    // aktif sohbet yoksa otomatik yeni sohbet aç
     if (!this._activeConversation()) {
       this.newConversation();
     }
@@ -151,7 +162,7 @@ export class ChatService {
       this._isTyping.set(true);
 
       setTimeout(async () => {
-        const botResponseContent = "İsteğiniz veritabanına kaydedildi.";
+        const botResponseContent = "...kayıt kontrol...";
         const botMsg: Message = {
           role: 'assistant',
           content: botResponseContent,
@@ -175,11 +186,15 @@ export class ChatService {
     }
   }
 
+
+  // se.ilen sohbet ekrana getir, mesajları yükle ve aktif sohbet olarak ayarla
   selectConversation(id: string) {
     const found = this._conversations().find(c => c.id === id) ?? null;
     this._activeConversation.set(found);
   }
 
+
+  // sohbet silme, önce mesajları sil sonra sohbeti kaldır
   deleteConversation(id: string) {
     const conv = this._conversations().find(c => c.id === id);
     if (!conv) return;
@@ -216,6 +231,9 @@ export class ChatService {
     });
   }
 
+
+
+  // yeni sohbet oluştur, benzersiz ID üret, boş mesaj listesi ile başlat ve aktif sohbet yap
   newConversation() {
     const conv: Conversation = {
       id: crypto.randomUUID(),
@@ -228,6 +246,8 @@ export class ChatService {
     this._activeConversation.set(conv);
   }
 
+
+// yeni mesaj geldiğinde aktif sohbeti güncelle, mesajı ekle, son mesajı ve tarihi güncelle, ardından tüm sohbetler listesini de güncelle
   private updateLocalMessages(msg: Message) {
     this._activeConversation.update(conv => {
       if (!conv) return null;

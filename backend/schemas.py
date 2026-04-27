@@ -44,7 +44,7 @@ class ChatMessageCreate(BaseModel):
         pattern="^(user|assistant)$",
 
     )
-    conversation_id: str | None = None  # ← ekle
+    conversation_id: str | None = None  # nullable, yani boş olabilir
     content:str = Field(    
         ...,
         min_length=1,
@@ -58,7 +58,7 @@ class ChatMessageResponse(BaseModel):
     user_id: int
     role: str
     content: str
-    created_at: datetime  # str değil datetime
-    conversation_id: str | None = None  # ← ekle
+    created_at: datetime 
+    conversation_id: str | None = None  # nullable, yani boş olabilir
 
     model_config = ConfigDict(from_attributes=True)

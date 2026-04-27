@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = "mysql+pymysql://root:muni1234.@localhost:3306/uygulama_db"                   
 
-# SQLAlchemy'nin MySQL ile "konuşma" aracı
+# SQLAlchemy'nin MySQL ile konuşma aracı
 engine = create_engine(
     DATABASE_URL,
     echo=False
@@ -25,6 +25,6 @@ Base = declarative_base()
 def get_db():
     db = SessionLocal()
     try:
-        yield db        # Oturumu endpoint'e ver
+        yield db        
     finally:
         db.close()      
