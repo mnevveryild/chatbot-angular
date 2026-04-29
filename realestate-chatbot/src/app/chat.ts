@@ -17,6 +17,27 @@ export interface Conversation {
   messages: Message[];
 }
 
+interface ChatAskResponse {
+  conversation_id: string;
+  answer: string;
+  user_message: {
+    id: number;
+    user_id: number;
+    role: 'user';
+    content: string;
+    created_at: string;
+    conversation_id: string;
+  };
+  assistant_message: {
+    id: number;
+    user_id: number;
+    role: 'assistant';
+    content: string;
+    created_at: string;
+    conversation_id: string;
+  };
+}
+
 @Injectable({ 
   providedIn: 'root' 
 })
@@ -152,33 +173,27 @@ export class ChatService {
     this.updateLocalMessages(userMsg);
 
     try {
-      await firstValueFrom(this.http.post(this.apiUrl, {
-        user_id: userId,
-        conversation_id: activeConv.id,
-        role: 'user',
-        content: cleanContent
-      }));
-
       this._isTyping.set(true);
 
-      setTimeout(async () => {
-        const botResponseContent = "...kayıt kontrol...";
-        const botMsg: Message = {
-          role: 'assistant',
-          content: botResponseContent,
-          timestamp: new Date()
-        };
+      const response = await firstValueFrom(
+        this.http.post<ChatAskResponse>(`${this.apiUrl}/ask`, {
+        user_id: userId,
+        conversation_id: activeConv.id,
+        question: cleanContent
+        })
+      );
 
-        await firstValueFrom(this.http.post(this.apiUrl, {
-          user_id: userId,
-          conversation_id: activeConv.id,
-          role: 'assistant',
-          content: botResponseContent
-        }));
+      this.updateLastUserMessageId(response.user_message.id);
 
-        this._isTyping.set(false);
-        this.updateLocalMessages(botMsg);
-      }, 1000);
+      const botMsg: Message = {
+        id: response.assistant_message.id,
+        role: 'assistant',
+        content: response.answer || response.assistant_message.content,
+        timestamp: new Date(response.assistant_message.created_at)
+      };
+
+      this._isTyping.set(false);
+      this.updateLocalMessages(botMsg);
 
     } catch (error) {
       console.error('Mesaj gönderimi başarısız:', error);
@@ -187,7 +202,7 @@ export class ChatService {
   }
 
 
-  // se.ilen sohbet ekrana getir, mesajları yükle ve aktif sohbet olarak ayarla
+  // seçili sohbet ekrana getir, mesajları yükle ve aktif sohbet olarak ayarla
   selectConversation(id: string) {
     const found = this._conversations().find(c => c.id === id) ?? null;
     this._activeConversation.set(found);
@@ -258,6 +273,26 @@ export class ChatService {
         timestamp: new Date()
       };
 
+      this._conversations.update(list =>
+        list.map(c => c.id === updated.id ? updated : c)
+      );
+      return updated;
+    });
+  }
+
+  private updateLastUserMessageId(id: number) {
+    this._activeConversation.update(conv => {
+      if (!conv) return null;
+
+      const messages = [...conv.messages];
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'user' && messages[i].id === undefined) {
+          messages[i] = { ...messages[i], id };
+          break;
+        }
+      }
+
+      const updated = { ...conv, messages };
       this._conversations.update(list =>
         list.map(c => c.id === updated.id ? updated : c)
       );

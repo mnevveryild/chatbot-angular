@@ -62,3 +62,20 @@ class ChatMessageResponse(BaseModel):
     conversation_id: str | None = None  # nullable, yani boş olabilir
 
     model_config = ConfigDict(from_attributes=True)
+
+# Chatbot'a soru sorma
+class ChatAskRequest(BaseModel):
+    user_id: int
+    question: str = Field(
+        ...,
+        min_length=1,
+        max_length=10000
+    )
+    conversation_id: str | None = None
+
+# Chatbot'un cevabını dönen 
+class ChatAskResponse(BaseModel):
+    conversation_id: str
+    answer: str
+    user_message: ChatMessageResponse
+    assistant_message: ChatMessageResponse

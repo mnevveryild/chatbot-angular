@@ -1,5 +1,5 @@
 
-from sqlalchemy import TIMESTAMP, Column, Enum, ForeignKey, Integer, String, Boolean, DateTime
+from sqlalchemy import BigInteger, TIMESTAMP, Column, Enum, ForeignKey, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.sql import func       
 from database import Base             
 
@@ -69,6 +69,23 @@ class ChatHistory(Base):
         TIMESTAMP, 
         server_default=func.now()
     )
-    
 
-    
+class Ilan(Base):
+    __tablename__ = "ilanlar"
+
+    ilan_no = Column(String(50), primary_key=True)
+    baslik = Column(String(255))
+    fiyat = Column(BigInteger)
+    oda_sayisi = Column(String(50))
+    m2 = Column(Integer)
+    bulundugu_kat = Column(String(50))
+    bina_yasi = Column(Integer)
+    isinma_tipi = Column(String(100))
+    tapu_durumu = Column(String(100))
+    konut_tipi = Column(String(100))
+    banyo_sayisi = Column(Integer)
+    kat_sayisi = Column(Integer)
+    krediye_uygun = Column(String(20))
+    esya_durumu = Column(String(50))
+    konum = Column(Text)
+    url = Column(Text)
