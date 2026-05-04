@@ -72,16 +72,24 @@
         <div class="form-content">
           <div class="form-header">
             <h2>Şifreyi sıfırla</h2>
-            <p>Şifrenizi sıfırlamanız için size bir bağlantı göndereceğiz</p>
+            <p>E-posta adresinizi girip yeni şifrenizi belirleyin</p>
           </div>
           @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
           @if (success()) { <div class="alert alert-success">{{ success() }}</div> }
           <div class="field">
             <label>E-posta Adresi</label>
-            <input type="email" [(ngModel)]="forgotEmail" placeholder="ornek@domain.com" (keydown.enter)="onForgotPassword()" />
+            <input type="email" [(ngModel)]="forgotEmail" placeholder="ornek@domain.com" />
+          </div>
+          <div class="field">
+            <label>Yeni Şifre</label>
+            <input type="password" [(ngModel)]="newPassword" placeholder="En az 6 karakter" />
+          </div>
+          <div class="field">
+            <label>Yeni Şifreyi Onayla</label>
+            <input type="password" [(ngModel)]="confirmNewPassword" placeholder="***********" (keydown.enter)="onForgotPassword()" />
           </div>
           <button class="btn-primary" (click)="onForgotPassword()" [disabled]="loading()">
-            @if (loading()) { <span class="spinner"></span> } @else { Sıfırlama Bağlantısı Gönder }
+            @if (loading()) { <span class="spinner"></span> } @else { Şifreyi Güncelle }
           </button>
           <p class="switch-mode"><a (click)="setMode('login')">← Giriş ekranına dön</a></p>
         </div>

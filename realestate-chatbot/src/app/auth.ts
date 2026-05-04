@@ -137,6 +137,38 @@ export class AuthService {
     }
   }
 
+  async resetPassword(
+    email: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<{ message: string }>(`${this.apiUrl}/reset-password`, {
+          email,
+          new_password: newPassword
+        })
+      );
+
+      return { success: true, message: response.message };
+
+    } catch (err) {
+      const error = err as HttpErrorResponse;
+
+      let message = 'Şifre güncellenemedi.';
+      if (error.status === 404) {
+        message = 'Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.';
+      } else if (error.status === 422) {
+        message = 'Şifre en az 6 karakter, bir büyük harf ve bir rakam içermelidir.';
+      } else if (error.status === 0) {
+        message = 'Sunucuya bağlanılamıyor.';
+      } else if (error.error?.detail) {
+        message = error.error.detail;
+      }
+
+      return { success: false, error: message };
+    }
+  }
+
   private setSession(user: User): void {
     this._currentUser.set(user);
     sessionStorage.setItem('re_user', JSON.stringify(user));

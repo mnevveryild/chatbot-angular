@@ -1,5 +1,4 @@
 import uuid
-import os
 from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException, status
@@ -7,102 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from dotenv import load_dotenv
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-
-from langchain_community.utilities import SQLDatabase
-from langchain_community.agent_toolkits import SQLDatabaseToolkit
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
 
 import models
 import schemas
+from agent import flush_observability, run_agent
 from database import get_db
-
-load_dotenv()
-
-# ─── Ortam değişkenleri ───────────────────────────────────────────────────────
-OLLAMA_MODEL         = os.getenv("OLLAMA_MODEL", "qwen3:4b")
-OLLAMA_BASE_URL      = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-LLM_TIMEOUT_SECONDS  = int(os.getenv("LLM_TIMEOUT_SECONDS", 1000000))
-MAX_CONTEXT_LISTINGS = int(os.getenv("MAX_CONTEXT_LISTINGS", 7))
-
-# MySQL bağlantısı — agent veritabanını doğrudan okuyacak
-MYSQL_URI = os.getenv(
-    "MYSQL_URI",
-    "mysql+pymysql://kullanici:sifre@localhost:3306/veritabani"
-)
-
-
-llm = ChatOllama(
-    model=OLLAMA_MODEL,
-    base_url=OLLAMA_BASE_URL,
-    temperature=0.0,   
-    num_ctx=4096,      
-    num_predict=1024,
-    keep_alive="10m",
-)
-
-agent_db = SQLDatabase.from_uri(
-    MYSQL_URI,
-    sample_rows_in_table_info=2,  
-)
-
-
-toolkit = SQLDatabaseToolkit(db=agent_db, llm=llm)
-tools   = toolkit.get_tools()
-
-SYSTEM_PROMPT = SystemMessage(content=f"""
-Sen bir emlak veritabanı asistanısın. Kullanıcının sorularını yanıtlamak için
-SQL sorguları yaz, çalıştır ve sonuçları Türkçe olarak açıkla.
-
-Kurallar:
-- Yalnızca SELECT sorguları kullan; INSERT, UPDATE, DELETE, DROP YASAK.
-- Sorgunu çalıştırmadan önce sql_db_query_checker aracıyla kontrol et.
-- Hata alırsan sorguyu düzelt ve tekrar dene.
-- Cevabını her zaman Türkçe ver.
-- Önce sql_db_list_tables ile tabloları keşfet, sonra sql_db_schema ile
-  ilgili tablonun şemasına bak, ardından sorgu yaz.
-- Kullanıcının sorusunu doğrudan yanıtla, gereksiz teknik detay verme.
-- ilanları listelerken tüm özellikleriyle birlikte göster, ilan no, başlık, fiyat, oda sayısı, m2, kat bilgisi, bina yaşı, ısınma tipi, tapu durumu, konut tipi, banyo sayısı, kat sayısı, krediye uygunluk, eşya durumu, konum ve url bilgilerini dahil et.
-""")
-
-agent_executor = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
-
-llm_executor = ThreadPoolExecutor(max_workers=2)
-
-
-def run_agent(question: str) -> str:
-    """
-    ReAct agent akışı:
-      1. Tabloları listeler
-      2. İlgili tablo şemasını okur
-      3. SQL yazar ve checker ile doğrular
-      4. SQL'i çalıştırır
-      5. Sonucu Türkçe özetler
-    Tüm adımlar LangGraph tarafından otomatik yönetilir.
-    """
-    def _invoke():
-        result = agent_executor.invoke(
-            {"messages": [HumanMessage(content=question)]}
-        )
-        final_message = result["messages"][-1]
-        return final_message.content if hasattr(final_message, "content") else str(final_message)
-
-    future = llm_executor.submit(_invoke)
-    try:
-        answer = future.result(timeout=LLM_TIMEOUT_SECONDS)
-    except FutureTimeoutError:
-        raise TimeoutError(
-            f"Agent {LLM_TIMEOUT_SECONDS} saniye içinde cevap vermedi. "
-            "Ollama çalışıyor mu ve model adı doğru mu kontrol edin."
-        )
-
-    if not answer or not answer.strip():
-        raise ValueError("Agent boş cevap döndürdü.")
-
-    return answer.strip()
 
 
 
@@ -121,6 +29,11 @@ app.add_middleware(
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+@app.on_event("shutdown")
+def shutdown_observability():
+    flush_observability()
 
 
 def hash_password(plain: str) -> str:
@@ -156,6 +69,17 @@ def login_user(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
     }
 
 
+@app.post("/api/reset-password")
+def reset_password(request: schemas.PasswordResetRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == request.email).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.")
+
+    user.hashed_password = hash_password(request.new_password)
+    db.commit()
+    return {"message": "Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz."}
+
+
 @app.post("/api/chat/ask", response_model=schemas.ChatAskResponse)
 def ask_chatbot(request: schemas.ChatAskRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == request.user_id).first()
@@ -165,7 +89,24 @@ def ask_chatbot(request: schemas.ChatAskRequest, db: Session = Depends(get_db)):
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
     try:
-        answer = run_agent(request.question)
+        history = []
+        if request.conversation_id:
+            history = [
+                (message.role, message.content)
+                for message in db.query(models.ChatHistory)
+                .filter(
+                    models.ChatHistory.user_id == request.user_id,
+                    models.ChatHistory.conversation_id == request.conversation_id,
+                )
+                .order_by(models.ChatHistory.created_at)
+                .all()
+            ]
+        answer = run_agent(
+            request.question,
+            history,
+            user_id=request.user_id,
+            conversation_id=conversation_id,
+        )
     except TimeoutError as exc:
         raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
     except Exception as exc:

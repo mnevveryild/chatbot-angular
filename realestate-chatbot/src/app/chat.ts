@@ -122,9 +122,10 @@ export class ChatService {
           timestamp: new Date(item.created_at)
         }));
 // mesaj içeriğinden başlık oluştur, son mesajı ve tarihini alarak conversation objesine ekle
+        const firstUserMessage = mapped.find(message => message.role === 'user');
         conversations.push({
           id: convId,
-          title: mapped[0]?.content.slice(0, 30) || 'Sohbet',
+          title: this.generateConversationTitle(firstUserMessage?.content || ''),
           lastMessage: mapped[mapped.length - 1]?.content || '',
           timestamp: new Date(messages[messages.length - 1].created_at),
           messages: mapped
@@ -252,7 +253,7 @@ export class ChatService {
   newConversation() {
     const conv: Conversation = {
       id: crypto.randomUUID(),
-      title: 'Yeni Sohbet',
+      title: 'Sohbet',
       lastMessage: '',
       timestamp: new Date(),
       messages: []
@@ -269,6 +270,7 @@ export class ChatService {
       const updated = {
         ...conv,
         messages: [...conv.messages, msg],
+        title: this.resolveConversationTitle(conv, msg),
         lastMessage: msg.content,
         timestamp: new Date()
       };
@@ -278,6 +280,45 @@ export class ChatService {
       );
       return updated;
     });
+  }
+
+  private resolveConversationTitle(conv: Conversation, msg: Message): string {
+    if (conv.title !== 'Sohbet' || msg.role !== 'user') {
+      return conv.title;
+    }
+
+    return this.generateConversationTitle(msg.content);
+  }
+
+  private generateConversationTitle(content: string): string {
+    const text = content
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[?!.]+$/g, '');
+
+    if (!text) return 'Sohbet';
+
+    const listingId = text.match(/\b(?:ilan\s*(?:no|numarası|id)?|id)\s*[:#-]?\s*(\d{3,})\b/i)?.[1]
+      || text.match(/\b\d{5,}\b/)?.[0];
+    if (listingId) {
+      return `İlan ${listingId}`;
+    }
+
+    const normalized = text
+      .replace(/^(bana|benim için|lütfen|acaba|merhaba|selam)\s+/i, '')
+      .replace(/\b(hakkında|ile ilgili|detaylarını|detayları|bilgi|verir misin|söyler misin|istiyorum|arıyorum|göster)\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const words = (normalized || text)
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 4);
+
+    if (words.length === 0) return 'Sohbet';
+
+    const title = words.join(' ');
+    return title.charAt(0).toLocaleUpperCase('tr-TR') + title.slice(1);
   }
 
   private updateLastUserMessageId(id: number) {

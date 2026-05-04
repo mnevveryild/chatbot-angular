@@ -2,7 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "mysql+pymysql://root:muni1234.@localhost:3306/ankara_full_4"                   
+from config import settings
+
+DATABASE_URL = settings.database_url
 
 # SQLAlchemy'nin MySQL ile konuşma aracı
 engine = create_engine(

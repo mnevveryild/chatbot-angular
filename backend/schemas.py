@@ -36,6 +36,23 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    new_password: str = Field(
+        ...,
+        min_length=6,
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if not any(c.isupper() for c in v):
+            raise ValueError("Şifre en az bir büyük harf içermelidir.")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Şifre en az bir rakam içermelidir.")
+        return v
+
+
 # Chat geçmişi için gelen veriyi tanımlayan şema (Angular -> FastAPI)
 class ChatMessageCreate(BaseModel):
     user_id:int

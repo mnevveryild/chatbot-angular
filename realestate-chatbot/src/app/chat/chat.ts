@@ -19,12 +19,17 @@ export class ChatComponent implements AfterViewChecked {
   inputText = '';
   sidebarOpen = signal(true); // Yan menü açık/kapalı durumu
   confirmDeleteId = signal<string | null>(null); // Silme onayı bekleyen sohbet ID'si
+  themeMode = signal<'light' | 'dark'>('light');
 // dışarıdan erişim için servisler ve router
   constructor(
     public auth: AuthService,
     public chatService: ChatService,
     private router: Router
   ) {
+    const savedTheme = localStorage.getItem('theme-mode') === 'dark' ? 'dark' : 'light';
+    this.themeMode.set(savedTheme);
+    this.applyTheme(savedTheme);
+
     // Aktif sohbet değiştiğinde otomatik olarak en aşağı kaydır
     effect(() => {
       const conv = this.chatService.activeConversation();
@@ -66,6 +71,18 @@ export class ChatComponent implements AfterViewChecked {
   newConv() { this.chatService.newConversation(); }
   logout() { this.auth.logout(); }
   toggleSidebar() { this.sidebarOpen.update(v => !v); }
+  isDarkMode() { return this.themeMode() === 'dark'; }
+
+  toggleTheme() {
+    const nextTheme = this.isDarkMode() ? 'light' : 'dark';
+    this.themeMode.set(nextTheme);
+    localStorage.setItem('theme-mode', nextTheme);
+    this.applyTheme(nextTheme);
+  }
+
+  private applyTheme(theme: 'light' | 'dark') {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
 
   confirmDelete(id: string, e: Event) {
     e.stopPropagation(); // Tıklamanın sohbete geçmesini engelle

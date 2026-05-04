@@ -25,6 +25,8 @@ export class LoginComponent {
   name = '';
   confirmPassword = '';
   forgotEmail = '';
+  newPassword = '';
+  confirmNewPassword = '';
 
   constructor(
     private auth: AuthService,
@@ -108,13 +110,29 @@ export class LoginComponent {
       return;
     }
 
+    if (!this.newPassword || !this.confirmNewPassword) {
+      this.error.set('Lütfen yeni şifrenizi iki kez girin.');
+      return;
+    }
+
+    if (this.newPassword !== this.confirmNewPassword) {
+      this.error.set('Yeni şifreler birbiriyle eşleşmiyor.');
+      return;
+    }
+
     this.loading.set(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      this.success.set(
-        'Eğer bu e-posta ile kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderilecektir.'
-      );
+      const result = await this.auth.resetPassword(this.forgotEmail, this.newPassword);
+      if (result.success) {
+        this.success.set(result.message || 'Şifreniz başarıyla güncellendi.');
+        this.email = this.forgotEmail;
+        this.password = '';
+        this.newPassword = '';
+        this.confirmNewPassword = '';
+      } else {
+        this.error.set(result.error || 'Şifre güncellenemedi.');
+      }
     } finally {
       this.loading.set(false);
     }

@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+sqlalchemy
+pymysql
+passlib[bcrypt]
+pydantic[email]
+langchain
+langchain-community
+langchain-openai
+langgraph
+langfuse
