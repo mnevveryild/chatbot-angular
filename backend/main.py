@@ -43,7 +43,7 @@ def hash_password(plain: str) -> str:
 @app.post("/api/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.email == user_data.email).first():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta adresi zaten kayıtlı.")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Geçersiz e-posta adresi.")
 
     new_user = models.User(
         full_name=user_data.full_name,
@@ -60,7 +60,7 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
 def login_user(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == login_data.email).first()
     if not user or not pwd_context.verify(login_data.password[:72], user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-posta veya şifre hatalı.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz e-posta veya şifre.")
     return {
         "id": str(user.id),
         "email": user.email,
@@ -73,7 +73,7 @@ def login_user(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
 def reset_password(request: schemas.PasswordResetRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == request.email).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Geçersiz e-posta adresi.")
 
     user.hashed_password = hash_password(request.new_password)
     db.commit()
@@ -84,7 +84,7 @@ def reset_password(request: schemas.PasswordResetRequest, db: Session = Depends(
 def ask_chatbot(request: schemas.ChatAskRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == request.user_id).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanıcı bulunamadı.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Geçersiz kullanıcı ID'si.")
 
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
@@ -145,7 +145,7 @@ def ask_chatbot(request: schemas.ChatAskRequest, db: Session = Depends(get_db)):
 @app.post("/api/chat", response_model=schemas.ChatMessageResponse)
 def save_chat_message(chat_message: schemas.ChatMessageCreate, db: Session = Depends(get_db)):
     if not db.query(models.User).filter(models.User.id == chat_message.user_id).first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanıcı bulunamadı.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Geçersiz kullanıcı ID'si.")
 
     conversation_id = chat_message.conversation_id or str(uuid.uuid4())
     new_message = models.ChatHistory(
@@ -178,7 +178,7 @@ def delete_messages(request: DeleteMessagesRequest, db: Session = Depends(get_db
 @app.delete("/api/chat/{user_id}")
 def delete_chat_history(user_id: int, db: Session = Depends(get_db)):
     if not db.query(models.User).filter(models.User.id == user_id).first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanıcı bulunamadı.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Geçersiz kullanıcı ID'si.")
     db.query(models.ChatHistory).filter(models.ChatHistory.user_id == user_id).delete()
     db.commit()
     return {"message": "Sohbet geçmişi silindi."}

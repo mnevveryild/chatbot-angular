@@ -53,7 +53,7 @@ Temel kurallar:
 """
 )
 
-agent_executor = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
+agent_executor = create_react_agent(llm, tools, prompt=os.getenv("SYSTEM_PROMPT"))
 llm_executor = ThreadPoolExecutor(max_workers=2)
 
 
