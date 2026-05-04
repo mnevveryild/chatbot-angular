@@ -1,5 +1,4 @@
-.env
-backend/.env
+
 __pycache__/
 *.py[cod]
 venv/
@@ -8,3 +7,5 @@ node_modules/
 realestate-chatbot/node_modules/
 realestate-chatbot/.angular/
 dist/
+.env
+backend/.env
