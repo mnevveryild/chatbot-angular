@@ -3,13 +3,13 @@
 
 
 <img width="1902" height="850" alt="resim1" src="https://github.com/user-attachments/assets/6098e1c4-e4ad-41ec-af10-7f83499b58e7" />
-
+</br>
 
 <img width="1902" height="837" alt="resim 2 2" src="https://github.com/user-attachments/assets/68e97d53-73a1-4fc3-ba30-9bfc22f19232" />
-
+</br>
 
 <img width="1896" height="848" alt="resim2" src="https://github.com/user-attachments/assets/16a09dba-f7db-4d30-b227-03e87ecacefa" />
-
+</br>
 
 **Angular 21 + FastAPI + LangGraph tabanlı akıllı emlak danışmanı**
 
