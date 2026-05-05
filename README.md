@@ -17,8 +17,10 @@
 ### Ekran Görüntüleri
 
 | Giriş Ekranı | Sohbet Arayüzü |
-|---|---|
-| ![Login](C:\Users\mnevv\OneDrive\Desktop\chatbot-angular\login.png)| ![Chat](C:\Users\mnevv\OneDrive\Desktop\chatbot-angular\chat.png) |
+
+<img width="1902" height="850" alt="login" src="https://github.com/user-attachments/assets/c1bbcb6b-7887-4ade-b3c4-44764d28be6e" />
+</br>
+ <img width="1896" height="848" alt="chat" src="https://github.com/user-attachments/assets/f5183b2a-7f81-4393-b7c7-f1c41b7cab1d" /> 
 
 ---
 
