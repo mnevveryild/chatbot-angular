@@ -11,6 +11,8 @@
 
   <div class="panel-right">
     <div class="form-card">
+
+      <!-- ── GİRİŞ ── -->
       @if (mode() === 'login') {
         <div class="form-content">
           <div class="form-header">
@@ -18,10 +20,15 @@
             <p>Ev aramanıza devam etmek için giriş yapın</p>
           </div>
           @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
           <div class="field">
             <label>E-posta Adresi</label>
-            <input type="email" [(ngModel)]="email" placeholder="ornek@domain.com" (keydown.enter)="onLogin()" />
+            <input type="email" [(ngModel)]="email" placeholder="ornek@gmail.com" (keydown.enter)="onLogin()" />
+            @if (emailDomainHint) {
+              <div class="field-hint hint-warn">{{ emailDomainHint }}</div>
+            }
           </div>
+
           <div class="field">
             <label>Şifre</label>
             <input type="password" [(ngModel)]="password" placeholder="***********" (keydown.enter)="onLogin()" />
@@ -29,15 +36,17 @@
               <a (click)="setMode('forgot')">Şifremi unuttum</a>
             </div>
           </div>
-          <button class="btn-primary" (click)="onLogin()">
-             Giriş Yap
+
+          <button class="btn-primary" (click)="onLogin()" [disabled]="loading()">
+            @if (loading()) { <span class="spinner"></span> } @else { Giriş Yap }
           </button>
-          <p class="switch-mode">Hesabınız yok mu? 
+          <p class="switch-mode">Hesabınız yok mu?
             <a (click)="setMode('register')">Hemen oluşturun</a>
           </p>
         </div>
       }
 
+      <!-- ── KAYIT ── -->
       @if (mode() === 'register') {
         <div class="form-content">
           <div class="form-header">
@@ -45,22 +54,33 @@
             <p>Hayalindeki evi bulan binlerce kişiye katılın</p>
           </div>
           @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
           <div class="field">
             <label>Ad Soyad</label>
             <input type="text" [(ngModel)]="name" placeholder="Adınız ve Soyadınız" />
           </div>
+
           <div class="field">
             <label>E-posta Adresi</label>
-            <input type="email" [(ngModel)]="email" placeholder="ornek@domain.com" />
+            <input type="email" [(ngModel)]="email" placeholder="ornek@gmail.com" />
+            @if (emailDomainHint) {
+              <div class="field-hint hint-warn">{{ emailDomainHint }}</div>
+            }
           </div>
+
           <div class="field">
             <label>Şifre</label>
-            <input type="password" [(ngModel)]="password" placeholder="En az 6 karakter" />
+            <input type="password" [(ngModel)]="password" placeholder="En az 6 karakter, büyük harf ve rakam" />
+            @if (passwordHint) {
+              <div class="field-hint hint-warn">{{ passwordHint }}</div>
+            }
           </div>
+
           <div class="field">
             <label>Şifreyi Onayla</label>
             <input type="password" [(ngModel)]="confirmPassword" placeholder="***********" (keydown.enter)="onRegister()" />
           </div>
+
           <button class="btn-primary" (click)="onRegister()" [disabled]="loading()">
             @if (loading()) { <span class="spinner"></span> } @else { Hesap Oluştur }
           </button>
@@ -68,6 +88,7 @@
         </div>
       }
 
+      <!-- ── ŞİFRE SIFIRLA ── -->
       @if (mode() === 'forgot') {
         <div class="form-content">
           <div class="form-header">
@@ -76,24 +97,35 @@
           </div>
           @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
           @if (success()) { <div class="alert alert-success">{{ success() }}</div> }
+
           <div class="field">
             <label>E-posta Adresi</label>
-            <input type="email" [(ngModel)]="forgotEmail" placeholder="ornek@domain.com" />
+            <input type="email" [(ngModel)]="forgotEmail" placeholder="ornek@gmail.com" />
+            @if (forgotEmailHint) {
+              <div class="field-hint hint-warn">{{ forgotEmailHint }}</div>
+            }
           </div>
+
           <div class="field">
             <label>Yeni Şifre</label>
-            <input type="password" [(ngModel)]="newPassword" placeholder="En az 6 karakter" />
+            <input type="password" [(ngModel)]="newPassword" placeholder="En az 6 karakter, büyük harf ve rakam" />
+            @if (newPasswordHint) {
+              <div class="field-hint hint-warn">{{ newPasswordHint }}</div>
+            }
           </div>
+
           <div class="field">
             <label>Yeni Şifreyi Onayla</label>
             <input type="password" [(ngModel)]="confirmNewPassword" placeholder="***********" (keydown.enter)="onForgotPassword()" />
           </div>
+
           <button class="btn-primary" (click)="onForgotPassword()" [disabled]="loading()">
             @if (loading()) { <span class="spinner"></span> } @else { Şifreyi Güncelle }
           </button>
           <p class="switch-mode"><a (click)="setMode('login')">← Giriş ekranına dön</a></p>
         </div>
       }
+
     </div>
   </div>
 </div>

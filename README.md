@@ -66,7 +66,6 @@ chatbot-angular/
 | Veritabanı | MySQL 8 + SQLAlchemy ORM |
 | AI Agent | LangGraph `create_react_agent` + LangChain SQL Toolkit |
 | LLM | OpenAI GPT-4.1-mini |
-| Gözlemlenebilirlik | Langfuse |
 | Kimlik Doğrulama | Passlib (bcrypt) + SessionStorage |
 
 ---
@@ -116,11 +115,6 @@ MYSQL_URI=mysql+pymysql://kullanici:sifre@localhost:3306/emlak_db
 DATABASE_URL=mysql+pymysql://kullanici:sifre@localhost:3306/emlak_db
 
 LLM_TIMEOUT_SECONDS=120
-
-# Opsiyonel — Langfuse gözlemlenebilirlik
-LANGFUSE_PUBLIC_KEY=
-LANGFUSE_SECRET_KEY=
-LANGFUSE_HOST=https://cloud.langfuse.com
 ```
 
 **Veritabanını oluşturun:**

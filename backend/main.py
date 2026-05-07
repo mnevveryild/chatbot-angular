@@ -1,23 +1,25 @@
 import uuid
+import asyncio
 from typing import List
+from datetime import datetime
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from passlib.context import CryptContext
 
 import models
 import schemas
+from config import settings
 from agent import flush_observability, run_agent
 from database import get_db
 
-
-
 app = FastAPI(
     title="Emlak Chatbot API",
-    description="SQL Agent tabanlı emlak chatbot",
-    version="2.0.0"
+    description="Asenkron SQL Agent tabanlı emlak chatbot",
+    version="3.0.0"
 )
 
 app.add_middleware(
@@ -36,19 +38,17 @@ def shutdown_observability():
     flush_observability()
 
 
-def hash_password(plain: str) -> str:
-    return pwd_context.hash(plain[:72])
-
+# ── Kullanıcı ──────────────────────────────────────────────────────────────────
 
 @app.post("/api/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.email == user_data.email).first():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Geçersiz e-posta adresi.")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta adresi zaten kayıtlı.")
 
     new_user = models.User(
         full_name=user_data.full_name,
         email=user_data.email,
-        hashed_password=hash_password(user_data.password)
+        hashed_password=pwd_context.hash(user_data.password[:72])
     )
     db.add(new_user)
     db.commit()
@@ -60,12 +60,15 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
 def login_user(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == login_data.email).first()
     if not user or not pwd_context.verify(login_data.password[:72], user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz e-posta veya şifre.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-posta veya şifre hatalı.")
+
     return {
-        "id": str(user.id),
-        "email": user.email,
-        "full_name": user.full_name,
-        "is_active": user.is_active
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+        }
     }
 
 
@@ -73,44 +76,49 @@ def login_user(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
 def reset_password(request: schemas.PasswordResetRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == request.email).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Geçersiz e-posta adresi.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kayıtlı kullanıcı bulunamadı.")
 
-    user.hashed_password = hash_password(request.new_password)
+    user.hashed_password = pwd_context.hash(request.new_password[:72])
     db.commit()
-    return {"message": "Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz."}
+    return {"message": "Şifreniz başarıyla güncellendi."}
 
+
+# ── Chatbot ────────────────────────────────────────────────────────────────────
 
 @app.post("/api/chat/ask", response_model=schemas.ChatAskResponse)
-def ask_chatbot(request: schemas.ChatAskRequest, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == request.user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Geçersiz kullanıcı ID'si.")
-
+async def ask_chatbot(request: schemas.ChatAskRequest, db: Session = Depends(get_db)):
     conversation_id = request.conversation_id or str(uuid.uuid4())
 
     try:
         history = []
         if request.conversation_id:
-            history = [
-                (message.role, message.content)
-                for message in db.query(models.ChatHistory)
+            recent_messages = (
+                db.query(models.ChatHistory)
                 .filter(
                     models.ChatHistory.user_id == request.user_id,
                     models.ChatHistory.conversation_id == request.conversation_id,
                 )
-                .order_by(models.ChatHistory.created_at)
+                .order_by(desc(models.ChatHistory.created_at))
+                .limit(10)
                 .all()
-            ]
-        answer = run_agent(
+            )
+            recent_messages.reverse()
+            history = [(msg.role, msg.content) for msg in recent_messages]
+
+        answer = await asyncio.to_thread(
+            run_agent,
             request.question,
             history,
             user_id=request.user_id,
             conversation_id=conversation_id,
         )
+
     except TimeoutError as exc:
         raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Agent hatası: {exc}")
+        import logging
+        logging.error(f"Agent Hatası: {exc}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Yapay zeka yanıt verirken bir sorun oluştu.")
 
     user_message = models.ChatHistory(
         user_id=request.user_id,
@@ -132,7 +140,7 @@ def ask_chatbot(request: schemas.ChatAskRequest, db: Session = Depends(get_db)):
         db.refresh(assistant_message)
     except Exception as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Mesajlar kaydedilemedi: {exc}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Mesajlar veritabanına kaydedilemedi.")
 
     return {
         "conversation_id": conversation_id,
@@ -144,9 +152,6 @@ def ask_chatbot(request: schemas.ChatAskRequest, db: Session = Depends(get_db)):
 
 @app.post("/api/chat", response_model=schemas.ChatMessageResponse)
 def save_chat_message(chat_message: schemas.ChatMessageCreate, db: Session = Depends(get_db)):
-    if not db.query(models.User).filter(models.User.id == chat_message.user_id).first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Geçersiz kullanıcı ID'si.")
-
     conversation_id = chat_message.conversation_id or str(uuid.uuid4())
     new_message = models.ChatHistory(
         user_id=chat_message.user_id,
@@ -162,37 +167,38 @@ def save_chat_message(chat_message: schemas.ChatMessageCreate, db: Session = Dep
 
 class DeleteMessagesRequest(BaseModel):
     message_ids: List[int]
+    user_id: int
 
 
 @app.post("/api/chat/delete-messages")
 def delete_messages(request: DeleteMessagesRequest, db: Session = Depends(get_db)):
     if not request.message_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Silinecek mesaj ID'si belirtilmedi.")
-    db.query(models.ChatHistory).filter(
-        models.ChatHistory.id.in_(request.message_ids)
+
+    deleted_count = db.query(models.ChatHistory).filter(
+        models.ChatHistory.user_id == request.user_id,
+        models.ChatHistory.id.in_(request.message_ids),
     ).delete(synchronize_session=False)
     db.commit()
-    return {"message": f"{len(request.message_ids)} mesaj silindi."}
+    return {"message": f"{deleted_count} mesaj silindi."}
 
 
-@app.delete("/api/chat/{user_id}")
+@app.delete("/api/chat")
 def delete_chat_history(user_id: int, db: Session = Depends(get_db)):
-    if not db.query(models.User).filter(models.User.id == user_id).first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Geçersiz kullanıcı ID'si.")
     db.query(models.ChatHistory).filter(models.ChatHistory.user_id == user_id).delete()
     db.commit()
     return {"message": "Sohbet geçmişi silindi."}
 
 
-@app.get("/api/chat/{user_id}", response_model=list[schemas.ChatMessageResponse])
+@app.get("/api/chat", response_model=list[schemas.ChatMessageResponse])
 def get_chat_history(user_id: int, db: Session = Depends(get_db)):
     return db.query(models.ChatHistory).filter(
         models.ChatHistory.user_id == user_id
     ).order_by(models.ChatHistory.created_at).all()
 
 
-@app.get("/api/chat/{user_id}/{conversation_id}", response_model=list[schemas.ChatMessageResponse])
-def get_conversation(user_id: int, conversation_id: str, db: Session = Depends(get_db)):
+@app.get("/api/chat/{conversation_id}", response_model=list[schemas.ChatMessageResponse])
+def get_conversation(conversation_id: str, user_id: int, db: Session = Depends(get_db)):
     return db.query(models.ChatHistory).filter(
         models.ChatHistory.user_id == user_id,
         models.ChatHistory.conversation_id == conversation_id

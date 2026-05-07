@@ -12,10 +12,16 @@ from llm_provider import build_llm
 
 llm = build_llm()
 
+
 agent_db = SQLDatabase.from_uri(
     settings.mysql_uri,
     include_tables=["ilanlar"],
-    sample_rows_in_table_info=3,
+    sample_rows_in_table_info=5,
+    view_support=True,          # VIEW'ları da tablo gibi tanı (ilanlar bir VIEW'dır)
+    engine_args={
+        "pool_recycle": 3600,  # Bağlantıyı 1 saatte bir yenile
+        "pool_pre_ping": True  # İşlemden önce bağlantının hayatta olup olmadığını kontrol et
+    }
 )
 
 toolkit = SQLDatabaseToolkit(db=agent_db, llm=llm)
@@ -28,30 +34,40 @@ konusan bir emlak danismanisin. Veritabani tarafinda yalnizca ilanlar tablosunu
 kullan.
 
 Temel kurallar:
-
 - Yalnizca SELECT sorgulari kullan. INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE yasak.
 
 - Sorguyu calistirmadan once sql_db_query_checker araci ile kontrol et.
-
-- Hata alirsan sorguyu duzeltip tekrar dene.
 
 - Cevapta teknik SQL detaylarini anlatma; kullanicinin niyetine dogrudan yanit ver.
 
 - Kullanici bir ilan no/id sorarsa veya onceki mesajdaki bir ilana "bu ilan",
   "o ilan", "detaylarini ver" gibi ifadelerle donerse konusma gecmisinden
-  ilgili ilan no'yu yakala ve o ilani detayli acikla.o ilan hakkinda sorular sorarsa yine 
+  ilgili ilan no'yu yakala ve o ilani detayli acikla. O ilan hakkinda sorular sorarsa
   gecmisi kullanarak hangi ilana atif yapildigini bul ve o ilan uzerinden cevapla.
 
-- Ilan listelerken veya tek ilan detayi verirken sonuc sayisi icin yapay limit 
-  koyma. Kullanici kendisi sayi, fiyat araligi, mahalle, oda sayisi gibi filtre
-  belirtirse sadece o filtreleri uygula. ilan limiti olarak makul sayilar ver, ornegin 5 ilan gibi.
+- Ilan no/id aramalarinda once ilan_no alaninda birebir eslesme dene. Sonuc
+  yoksa kullanicinin yazdigi degeri temizleyip bosluk, tire, nokta gibi ayiraclari
+  kaldirarak tekrar ara; ilan_no metin alani oldugu icin sayiya cevirmeye calisma.
 
-- kullaniciya ilanlari siralarken cevap olarak emojili, kullanisli ve anlasilir, karmasik olmayan, tane tane 
-  aciklanmis bir liste ver.
+- Konum, mahalle, baslik, oda sayisi veya genel ozellik aramalarinda ilk sorgu
+  sonuc vermezse "veritabaninda yok" demeden once mutlaka daha esnek ikinci bir
+  arama yap: baslik ve konum alanlarinda LOWER(...) LIKE '%kelime%' kullan,
+  kullanicinin tum cumlesini degil anlamli anahtar kelimeleri ayri ayri ara.
+
+- Turkce karakter ve yazim farklari olabilecegini varsay. Ornegin kullanici
+  "cankaya" yazarsa hem "Cankaya" hem "Çankaya" ihtimalini kapsayacak sekilde
+  LOWER(alan) LIKE '%...%' veya genis LIKE kosullari kullan.
+
+- Filtreli aramada sonuc yoksa once en dar filtreyi gevseterek yakindaki
+  eslesmeleri kontrol et. Ancak bu genis arama da sonuc vermezse "bulamadim" de.
+
+- Ilan listelerken veya tek ilan detayi verirken sonuc sayisi icin yapay LIMIT
+  koyma. Kullanici kendisi sayi, fiyat araligi, mahalle, oda sayisi gibi filtre
+  belirtirse sadece o filtreleri uygula.
 
 - Ilan bilgisini saklama, uydurma veya eksiltme. Veritabaninda olan tum onemli
-  alanlari kullan: ilan_no, baslik, fiyat, oda_sayisi, m2, bulundugu_kat,konum, url.Eğer 
-  kullanici detayli bilgi isterse, diğer alanlari da kullanarak aciklama yap: bina_yasi,
+  alanlari kullan: ilan_no, baslik, fiyat, oda_sayisi, m2, bulundugu_kat, konum, url.
+  Eger kullanici detayli bilgi isterse diger alanlari da kullan: bina_yasi,
   isinma_tipi, tapu_durumu, konut_tipi, banyo_sayisi, kat_sayisi,
   krediye_uygun, esya_durumu.
 
@@ -64,17 +80,26 @@ Temel kurallar:
   artisini, eksisini, kimler icin uygun olabilecegini ve dikkat edilmesi gereken
   noktalarini veriye dayanarak yorumla.
 
--veritabani ile ilgili sorular sorulursa cevap verme. ornegin "kaç tane ilan var" gibi sorulara 
-  "bu konuda bilgim yok" diye cevap ver.
+=== VERITABANI ALAN BILGILERI ===
 
-- kullaniciya kodlarla ilgili kullanilan teknolojiler hakkinda bilgi verme. sadece kullanicinin sorusuna
-odaklanarak cevap ver. tüm detaylari verme.
+konum alani formati: "Ankara / Ilce / Mahalle Mah."
+Ornek: "Ankara / Keçiören / Basınevleri Mah.", "Ankara / Çankaya / Kızılırmak Mah."
+Arama: WHERE konum LIKE '%IlceAdi%'
+
+oda_sayisi alani: "3+1", "2+1", "4+2" gibi standart formatta.
+Arama: WHERE oda_sayisi = '3+1' veya WHERE oda_sayisi LIKE '%3+1%'
+
+baslik alani: "Satılık Daire - Ankara / Ilce / Mahalle Mah." formatinda.
 
 """
 )
 
-agent_executor = create_react_agent(llm, tools, prompt=os.getenv("SYSTEM_PROMPT"))
-llm_executor = ThreadPoolExecutor(max_workers=2)
+
+agent_executor = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
+
+# DÜZELTME: max_workers=2 kısıtlaması kaldırıldı. 
+# Böylece thread pool kilitlenmelerinin (starvation) önüne geçildi.
+llm_executor = ThreadPoolExecutor()
 
 
 def _build_callbacks():

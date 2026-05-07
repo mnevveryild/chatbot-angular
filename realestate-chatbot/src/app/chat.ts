@@ -93,7 +93,7 @@ export class ChatService {
   async loadAllConversations(userId: number) {
     try {
       const history = await firstValueFrom( 
-        this.http.get<any[]>(`${this.apiUrl}/${userId}`)
+        this.http.get<any[]>(`${this.apiUrl}`, { params: { user_id: userId } })
       );
 
       if (history.length === 0) {
@@ -212,6 +212,12 @@ export class ChatService {
 
   // sohbet silme, önce mesajları sil sonra sohbeti kaldır
   deleteConversation(id: string) {
+    const userId = this.currentUserId();
+    if (!userId) {
+      console.error('Kullanıcı ID bulunamadı.');
+      return;
+    }
+
     const conv = this._conversations().find(c => c.id === id);
     if (!conv) return;
 
@@ -229,6 +235,7 @@ export class ChatService {
 
     firstValueFrom(
       this.http.post(`${this.apiUrl}/delete-messages`, {
+        user_id: userId,
         message_ids: messageIds
       })
     ).then(() => {

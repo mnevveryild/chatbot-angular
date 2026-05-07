@@ -19,10 +19,12 @@ export interface RegisterResponse {
 }
 
 export interface LoginResponse {
-  id: string;
-  email: string;
-  full_name: string;
-  is_active: boolean;
+  user: {
+    id: number;
+    email: string;
+    full_name: string;
+    is_active: boolean;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -64,16 +66,16 @@ export class AuthService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await firstValueFrom(
-        this.http.post<LoginResponse>(`${this.apiUrl}/login`, { //backend ile frontendi konuşturduk
+        this.http.post<LoginResponse>(`${this.apiUrl}/login`, {
           email,
           password
         })
       );
 
       const user: User = {
-        id: response.id,
-        email: response.email,
-        full_name: response.full_name
+        id: String(response.user.id),
+        email: response.user.email,
+        full_name: response.user.full_name
       };
 
       this.setSession(user);

@@ -179,6 +179,17 @@
       cursor: pointer;
       &:hover { color: var(--accent-gold); }
     }
+
+    &.hint-warn {
+      justify-content: flex-start;
+      font-size: 0.78rem;
+      color: #b45309;
+      background: rgba(180, 83, 9, 0.07);
+      border: 1px solid rgba(180, 83, 9, 0.18);
+      border-radius: 4px;
+      padding: 0.35rem 0.6rem;
+      line-height: 1.45;
+    }
   }
 }
 

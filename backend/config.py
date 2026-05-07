@@ -21,7 +21,7 @@ class Settings:
     llm_timeout_seconds: int = _get_int("LLM_TIMEOUT_SECONDS", 120)
 
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
-    openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     mysql_uri: str = os.getenv(
         "MYSQL_URI",
@@ -35,6 +35,5 @@ class Settings:
             "mysql+pymysql://kullanici:sifre@localhost:3306/veritabani",
         ),
     )
-
 
 settings = Settings()
