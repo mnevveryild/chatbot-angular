@@ -110,10 +110,6 @@ export class LoginComponent {
       return;
     }
 
-    if (!this.isEmailDomainValid(this.email)) {
-      this.error.set(`Geçersiz e-posta uzantısı. Kabul edilenler: ${ALLOWED_DOMAINS.map(d => '@' + d).join(', ')}`);
-      return;
-    }
 
     this.loading.set(true);
 

@@ -23,10 +23,7 @@
 
           <div class="field">
             <label>E-posta Adresi</label>
-            <input type="email" [(ngModel)]="email" placeholder="ornek@gmail.com" (keydown.enter)="onLogin()" />
-            @if (emailDomainHint) {
-              <div class="field-hint hint-warn">{{ emailDomainHint }}</div>
-            }
+            <input type="email" [(ngModel)]="email" placeholder="ornek@gmail.com" (keydown.enter)="onLogin()" autocomplete="off" />
           </div>
 
           <div class="field">
