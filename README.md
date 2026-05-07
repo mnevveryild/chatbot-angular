@@ -225,7 +225,7 @@ Agent'ın kullandığı `ilanlar` tablosunun beklenen sütunları:
 
 ## 📄 Lisans
 
-Bu proje [ISC](LICENSE) lisansı ile lisanslanmıştır.
+Bu proje [MIT](LICENSE) lisansı ile lisanslanmıştır.
 
 ---
 
