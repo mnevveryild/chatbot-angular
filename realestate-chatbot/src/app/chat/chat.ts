@@ -25,6 +25,7 @@ export class ChatComponent implements AfterViewChecked {
     public auth: AuthService,
     public chatService: ChatService,
     private router: Router
+      
   ) {
     const savedTheme = localStorage.getItem('theme-mode') === 'dark' ? 'dark' : 'light';
     this.themeMode.set(savedTheme);

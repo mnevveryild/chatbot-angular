@@ -74,8 +74,8 @@ export class LoginComponent {
   get passwordHint(): string {
     if (!this.password) return '';
     const hints: string[] = [];
-    if (!this.passwordHasUpper) hints.push('büyük harf');
-    if (!this.passwordHasLower) hints.push('küçük harf');
+    if (!this.passwordHasUpper) hints.push('büyük harf(ingilizce karakter)');
+    if (!this.passwordHasLower) hints.push('küçük harf(ingilizce karakter)');
     if (!this.passwordHasDigit) hints.push('rakam');
     if (this.password.length < 6) hints.push('en az 6 karakter');
     if (hints.length === 0) return '';
@@ -86,8 +86,8 @@ export class LoginComponent {
   get newPasswordHint(): string {
     if (!this.newPassword) return '';
     const hints: string[] = [];
-    if (!/[A-Z]/.test(this.newPassword)) hints.push('büyük harf');
-    if (!/[a-z]/.test(this.newPassword)) hints.push('küçük harf');
+    if (!/[A-Z]/.test(this.newPassword)) hints.push('büyük harf(ingilizce karakter)');
+    if (!/[a-z]/.test(this.newPassword)) hints.push('küçük harf(ingilizce karakter)');
     if (!/\d/.test(this.newPassword)) hints.push('rakam');
     if (this.newPassword.length < 6) hints.push('en az 6 karakter');
     if (hints.length === 0) return '';

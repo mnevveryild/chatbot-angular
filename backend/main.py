@@ -38,7 +38,7 @@ def shutdown_observability():
     flush_observability()
 
 
-# ── Kullanıcı ──────────────────────────────────────────────────────────────────
+
 
 @app.post("/api/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
