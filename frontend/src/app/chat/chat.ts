@@ -4,11 +4,12 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth';
 import { ChatService, Conversation } from '../chat';
 import { Router } from '@angular/router';
+import { MarkdownLinkPipe } from '../markdown-link.pipe';
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, MarkdownLinkPipe],
   templateUrl: './chat.html',
   styleUrl: './chat.scss'
 })

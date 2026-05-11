@@ -463,6 +463,17 @@
   line-height: 1.6;
   word-break: break-word;
   white-space: pre-line;
+
+  .chat-link {
+    color: var(--accent, #4f8ef7);
+    text-decoration: underline;
+    font-weight: 500;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 }
 
 .typing-bubble {
