@@ -2,7 +2,8 @@
   <aside class="sidebar" [class.collapsed]="!sidebarOpen()">
     <div class="sidebar-header">
       <div class="brand">
-        <span class="brand-name" *ngIf="sidebarOpen()">Emlakçım</span>
+        <span class="brand-name" *ngIf="sidebarOpen()">
+                      |Emlakçım</span>
       </div>
       <button class="icon-btn" (click)="toggleSidebar()" [title]="sidebarOpen() ? 'Daralt' : 'Genişlet'">
         @if (sidebarOpen()) {

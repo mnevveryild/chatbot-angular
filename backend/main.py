@@ -17,8 +17,8 @@ from agent import flush_observability, run_agent
 from database import get_db
 
 app = FastAPI(
-    title="Emlak Chatbot API",
-    description="Asenkron SQL Agent tabanlı emlak chatbot",
+    title="Emlak Chatbot",
+    description="SQL Agent tabanlı emlak chatbot",
     version="3.0.0"
 )
 
