@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(Select-String -Path \"C:\\\\Users\\\\mnevv\\\\OneDrive\\\\Desktop\\\\chatbot-angular\\\\frontend\\\\src\\\\app\\\\chat\\\\chat.scss\" -Pattern \"chat-link|\\\\.bot-bubble|bubble-text\")",
-      "Bash(Select-Object -First 20)"
+      "Bash(Select-Object -First 20)",
+      "Bash(node create_emlak_chatbot.js)",
+      "Bash(npm install *)",
+      "Bash(python scripts/office/soffice.py --headless --convert-to pdf \"C:\\\\Users\\\\mnevv\\\\OneDrive\\\\Desktop\\\\chatbot-angular\\\\Emlak_Chatbot_Sunum.pptx\")",
+      "Bash(where soffice *)",
+      "Bash(where libreoffice *)",
+      "Read(//c/Program Files/LibreOffice/program/**)",
+      "Bash(python scripts/extract_text.py \"C:\\\\Users\\\\mnevv\\\\OneDrive\\\\Desktop\\\\chatbot-angular\\\\Emlak_Chatbot_Sunum.pptx\")",
+      "Bash(pip show *)",
+      "Bash(pip install *)",
+      "Bash(python -c ' *)"
     ]
   }
 }
