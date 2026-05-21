@@ -10,23 +10,6 @@ from config import settings
 from llm_provider import build_llm
 
 
-llm = build_llm()
-
-
-agent_db = SQLDatabase.from_uri(
-    settings.mysql_uri,
-    include_tables=["ilanlar_raw"],  # Sadece ilanlar_raw tablosunu dahil et
-    sample_rows_in_table_info=5,
-    view_support=True,          # VIEW'ları da tablo gibi tanı (ilanlar bir VIEW'dır)
-    engine_args={
-        "pool_recycle": 3600,  # Bağlantıyı 1 saatte bir yenile
-        "pool_pre_ping": True  # İşlemden önce bağlantının hayatta olup olmadığını kontrol et
-    }
-)
-
-toolkit = SQLDatabaseToolkit(db=agent_db, llm=llm)
-tools = toolkit.get_tools()
-
 SYSTEM_PROMPT = SystemMessage(
     content="""
 Sen MySQL'deki emlak ilanlarini inceleyen, kullaniciyla Turkce ve akilli sekilde
@@ -115,11 +98,31 @@ Arama: WHERE oda_sayisi = '3+1' veya WHERE oda_sayisi LIKE '%3+1%'
 """
 )
 
-agent_executor = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
-
-# DÜZELTME: max_workers=2 kısıtlaması kaldırıldı. 
-# Böylece thread pool kilitlenmelerinin (starvation) önüne geçildi.
+_llm = None
+_agent_executor = None
 llm_executor = ThreadPoolExecutor()
+
+
+def _get_agent():
+    global _llm, _agent_executor
+    if _agent_executor is not None:
+        return _agent_executor
+
+    _llm = build_llm()
+    agent_db = SQLDatabase.from_uri(
+        settings.mysql_uri,
+        include_tables=["ilanlar_raw"],
+        sample_rows_in_table_info=5,
+        view_support=True,
+        engine_args={
+            "pool_recycle": 3600,
+            "pool_pre_ping": True,
+        },
+    )
+    toolkit = SQLDatabaseToolkit(db=agent_db, llm=_llm)
+    tools = toolkit.get_tools()
+    _agent_executor = create_react_agent(_llm, tools, prompt=SYSTEM_PROMPT)
+    return _agent_executor
 
 
 def _build_callbacks():
@@ -185,7 +188,7 @@ def run_agent(
             "langfuse_user_id": str(user_id) if user_id is not None else None,
             "langfuse_session_id": conversation_id,
         }
-        result = agent_executor.invoke(
+        result = _get_agent().invoke(
             {"messages": _to_agent_messages(history or [], question)},
             config={
                 "run_name": "realestate-sql-agent",
